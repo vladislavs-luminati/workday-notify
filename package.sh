@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VERSION=$(git -C "$SCRIPT_DIR" describe --tags --always 2>/dev/null || echo "dev")
 
 mkdir -p "$SCRIPT_DIR/dist"
-OUT="$SCRIPT_DIR/dist/setup.sh"
+OUT="$SCRIPT_DIR/dist/workday-notify-${VERSION}.sh"
 
 # Files to include in the distribution
 DIST_FILES=(
@@ -83,5 +83,5 @@ HEADER
 echo "$PAYLOAD" >> "$OUT"
 chmod +x "$OUT"
 
-echo "✓ Created dist/setup.sh $VERSION ($(wc -c < "$OUT" | tr -d ' ') bytes)"
+echo "✓ Created dist/workday-notify-${VERSION}.sh ($(wc -c < "$OUT" | tr -d ' ') bytes)"
 echo "  Embedded: ${DIST_FILES[*]}"
