@@ -46,8 +46,10 @@ Runs via `launchd` every 15 minutes. Schedule is defined in a simple config file
 
 ## Requirements
 
-- macOS
-- [Homebrew](https://brew.sh) (for auto-installing `terminal-notifier`)
+- macOS or Linux (see notes below)
+- [Homebrew](https://brew.sh) (for auto-installing `terminal-notifier` on macOS)
+
+Note about Bash: the main script uses Bash features. On Linux the system Bash is suitable; on macOS the bundled Bash may be older. The installer checks for a usable Bash and will advise installing a newer Bash (Homebrew `bash`) if needed.
 
 ## Quick Install (one command)
 
@@ -144,6 +146,33 @@ Override config path (useful for testing from another location):
 
 ```bash
 WORKDAY_CONFIG=/path/to/config.conf bash workday-notify.sh
+```
+
+## Quick test flag
+
+You can send a single test notification (no daemon) with:
+
+```bash
+bash src/workday-notify.sh --test
+```
+
+## Packaging / one-file installer
+
+Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.0.sh`). To install from a release artifact, copy it to the target host and run:
+
+```bash
+bash dist/workday-notify-v1.0.0.sh
+```
+
+## Linux (systemd user timer)
+
+On Linux the installer creates a `systemd --user` service + timer that runs the script periodically (default: every 10 minutes). To install from the cloned repo use `install.sh` or the packaged installer.
+
+Check the timer and service with:
+
+```bash
+systemctl --user status workday-notify.timer
+journalctl --user -u workday-notify.service
 ```
 
 ## Files
