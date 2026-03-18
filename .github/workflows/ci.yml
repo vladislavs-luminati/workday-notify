@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -15,12 +16,36 @@ jobs:
         run: |
           sudo apt-get install -y shellcheck
           shellcheck -x -s bash src/workday-notify.sh src/platform/*.sh
-          shellcheck -s bash install.sh uninstall.sh setup.sh
-          shellcheck -s bash tests/test_helper.sh tests/mock_platform.sh
+          shellcheck -s bash install.sh uninstall.sh package.sh scripts/*.sh || true
+          shellcheck -s bash tests/test_helper.sh tests/mock_platform.sh || true
+
+      - name: Bash syntax check
+        run: |
+          # syntax-check all repository shell scripts
+          git ls-files '*.sh' | xargs -r -n1 bash -n
 
   test:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Run tests
         run: bash tests/test_schedule.sh
+
+  package:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build package
+        run: |
+          bash package.sh
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

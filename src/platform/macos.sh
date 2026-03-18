@@ -44,8 +44,9 @@ platform_install_daemon() {
     local plist_name="com.workday-notify"
     local plist_path="$HOME/Library/LaunchAgents/$plist_name.plist"
 
-    launchctl list 2>/dev/null | grep -q "$plist_name" && \
+    if launchctl list 2>/dev/null | grep -q "$plist_name"; then
         launchctl unload "$plist_path" 2>/dev/null || true
+    fi
 
     cat > "$plist_path" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -75,7 +76,8 @@ EOF
 platform_uninstall_daemon() {
     local plist_name="com.workday-notify"
     local plist_path="$HOME/Library/LaunchAgents/$plist_name.plist"
-    launchctl list 2>/dev/null | grep -q "$plist_name" && \
+    if launchctl list 2>/dev/null | grep -q "$plist_name"; then
         launchctl unload "$plist_path" 2>/dev/null
+    fi
     rm -f "$plist_path"
 }
