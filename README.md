@@ -47,10 +47,32 @@ Runs via `launchd` every 15 minutes. Schedule is defined in a simple config file
 ## Requirements
 
 - macOS
-- [terminal-notifier](https://github.com/julienXX/terminal-notifier):
-  `brew install terminal-notifier`
+- [Homebrew](https://brew.sh) (for auto-installing `terminal-notifier`)
 
-## Install
+## Quick Install (one command)
+
+```bash
+curl -sL https://raw.githubusercontent.com/vladislavs-luminati/workday-notify/main/setup.sh | bash
+```
+
+This downloads and runs the setup script which:
+1. Installs `terminal-notifier` via Homebrew (if missing)
+2. Creates `~/.workday-notify/` with the script and a default config
+3. Registers a launchd agent that runs every 10 min
+4. Preserves your existing `config.conf` if upgrading
+
+> **Note:** The repo must be public for the `curl` URL to work. For private
+> repos, clone and run `bash setup.sh` locally.
+
+## Install (from clone)
+
+```bash
+git clone https://github.com/vladislavs-luminati/workday-notify.git
+cd workday-notify
+bash setup.sh
+```
+
+Or install from the project directory:
 
 ```bash
 bash install.sh
