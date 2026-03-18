@@ -37,15 +37,7 @@ if [[ ! -f "$CONFIG" ]]; then
   exit 1
 fi
 
-now_minutes() {
-  local h m
-  h=$(date +%H); m=$(date +%M)
-  echo $((10#$h*60 + 10#$m))
-}
-
 HOUR=$(date +%H); MIN=$(date +%M); NOW=$((HOUR * 60 + MIN))
- # keep helper available for other uses
- # now_minutes() { ... }
 
 get_status() {
   # try to run `daily status` in a login shell and extract a compact summary
