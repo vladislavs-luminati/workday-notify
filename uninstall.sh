@@ -1,6 +1,6 @@
 #!/bin/bash
 # Uninstall workday-notify launchd agent
-PLIST_NAME="com.vladislavs.workday"
+PLIST_NAME="com.workday-notify"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
 
 if launchctl list | grep -q "$PLIST_NAME"; then

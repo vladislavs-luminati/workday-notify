@@ -3,13 +3,13 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLIST_NAME="com.vladislavs.workday"
+PLIST_NAME="com.workday-notify"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
 
 # Unload if already running
 launchctl list | grep -q "$PLIST_NAME" && launchctl unload "$PLIST_PATH" 2>/dev/null || true
 
-chmod +x "$SCRIPT_DIR/workday-notify.sh"
+chmod +x "$SCRIPT_DIR/src/workday-notify.sh"
 
 cat > "$PLIST_PATH" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -21,7 +21,7 @@ cat > "$PLIST_PATH" << EOF
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>$SCRIPT_DIR/workday-notify.sh</string>
+        <string>$SCRIPT_DIR/src/workday-notify.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>600</integer>

@@ -1,0 +1,145 @@
+#!/bin/bash
+# workday-notify test suite
+
+TEST_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$TEST_DIR/test_helper.sh"
+
+echo "=== workday-notify test suite ==="
+echo ""
+
+# ─── Schedule matching ─────────────────────────────────────────
+
+echo "Schedule matching:"
+
+run_at 500  # 08:20 — inside 08:00+75min window
+assert_log_contains "NOTIFY|Good morning!" "08:20 triggers Good morning"
+assert_log_contains "daily login" "08:20 has daily login command"
+
+run_at 630  # 10:30
+assert_log_contains "NOTIFY|Break time" "10:30 triggers Break time"
+assert_log_contains "Total: 4h 30m" "10:30 break includes daily status"
+
+run_at 750  # 12:30
+assert_log_contains "NOTIFY|Lunch break" "12:30 triggers Lunch break"
+
+run_at 840  # 14:00
+assert_log_contains "NOTIFY|Break time" "14:00 triggers Break time"
+
+run_at 930  # 15:30
+assert_log_contains "NOTIFY|Break time" "15:30 triggers Break time"
+
+run_at 1020  # 17:00
+assert_log_contains "NOTIFY|Wrapping up" "17:00 triggers Wrapping up"
+
+run_at 1050  # 17:30
+assert_log_contains "NOTIFY|Log out!" "17:30 triggers Log out"
+assert_log_contains "daily logout" "17:30 has daily logout command"
+assert_log_contains "Total: 4h 30m" "17:30 logout includes daily status"
+
+echo ""
+
+# ─── No match outside windows ──────────────────────────────────
+
+echo "No match outside windows:"
+
+run_at 400  # 06:40 — before any window
+assert_log_not_contains "NOTIFY" "06:40 sends no schedule notification"
+
+run_at 600  # 10:00 — between windows
+assert_log_not_contains "NOTIFY" "10:00 sends no schedule notification"
+
+echo ""
+
+# ─── Login entry skips daily status ────────────────────────────
+
+echo "Login skips status:"
+
+run_at 500  # 08:20
+assert_log_not_contains "Total:" "Good morning does NOT include daily status"
+
+echo ""
+
+# ─── Late section ──────────────────────────────────────────────
+
+echo "Late section:"
+
+run_at 1080  # 18:00 — exactly at late start
+assert_log_contains "NOTIFY|⚠️ Working late!" "18:00 triggers late warning"
+assert_log_contains "daily logout" "late has daily logout command"
+assert_log_contains "Total: 4h 30m" "late includes daily status"
+
+run_at 1110  # 18:30 — next repeat boundary
+assert_log_contains "NOTIFY|⚠️ Working late!" "18:30 triggers late (repeat=30)"
+
+run_at 1095  # 18:15 — between boundaries (15 min after, but repeat=30)
+assert_log_not_contains "NOTIFY|⚠️ Working late!" "18:15 does NOT trigger (off boundary)"
+
+echo ""
+
+# ─── Daily update ──────────────────────────────────────────────
+
+echo "Daily update:"
+
+run_at 560  # 09:20 — after 09:15
+assert_log_contains "DAILY_UPDATE|Daily update" "09:20 triggers daily update"
+assert_file_exists "/tmp/workday-daily-update-$(date +%Y-%m-%d)" "marker file created"
+
+# With marker present, should NOT fire again
+# Don't call run_at (it clears markers); run directly with marker in place
+> "$MOCK_LOG"
+local_tmp="/tmp/workday-notify-test-marker-$$.sh"
+sed \
+    -e "s|NOW=\$((HOUR \* 60 + MIN))|NOW=570|" \
+    -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
+    "$SRC_DIR/workday-notify.sh" | \
+    awk '/^get_status\(\)/{found=1} found && /^}/{print "get_status() { echo \"Total: 4h 30m\"; }"; found=0; next} !found' \
+    > "$local_tmp"
+WORKDAY_CONFIG="$TEST_DIR/fixtures/default.conf" bash "$local_tmp" 2>/dev/null
+sleep 1
+rm -f "$local_tmp"
+assert_log_not_contains "DAILY_UPDATE" "09:30 skips daily update (marker exists)"
+
+echo ""
+
+# ─── Daily update disabled ─────────────────────────────────────
+
+echo "Daily update disabled:"
+
+rm -f /tmp/workday-daily-update-*
+run_at 560 "$TEST_DIR/fixtures/no_daily_update.conf"
+assert_log_not_contains "DAILY_UPDATE" "daily update disabled in config"
+
+echo ""
+
+# ─── Daily update before start time ───────────────────────────
+
+echo "Daily update timing:"
+
+rm -f /tmp/workday-daily-update-*
+run_at 540  # 09:00 — before 09:15
+assert_log_not_contains "DAILY_UPDATE" "09:00 does not trigger daily update (before 09:15)"
+
+echo ""
+
+# ─── Config missing ──────────────────────────────────────────
+
+echo "Error handling:"
+
+# Missing config: build patched script with mock platform, point to missing config
+> "$MOCK_LOG"
+err_tmp="/tmp/workday-notify-test-err-$$.sh"
+sed -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
+    "$SRC_DIR/workday-notify.sh" > "$err_tmp"
+WORKDAY_CONFIG="/tmp/nonexistent-config-$$.conf" bash "$err_tmp" 2>/dev/null || true
+sleep 0.5
+rm -f "$err_tmp"
+assert_log_contains "NOTIFY|Workday Notify|config.conf not found" "missing config shows error notification"
+
+echo ""
+
+# ─── Summary ──────────────────────────────────────────────────
+
+# Cleanup
+rm -f /tmp/workday-daily-update-* "$MOCK_LOG"
+
+print_summary

@@ -5,7 +5,7 @@
 set -e
 
 INSTALL_DIR="$HOME/.workday-notify"
-PLIST_NAME="com.vladislavs.workday"
+PLIST_NAME="com.workday-notify"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
 
 echo "=== workday-notify installer ==="
@@ -214,7 +214,7 @@ echo "  Installed script: $INSTALL_DIR/workday-notify.sh"
 # Write uninstall script
 cat > "$INSTALL_DIR/uninstall.sh" << 'UNINSTALL'
 #!/bin/bash
-PLIST_NAME="com.vladislavs.workday"
+PLIST_NAME="com.workday-notify"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
 launchctl list 2>/dev/null | grep -q "$PLIST_NAME" && launchctl unload "$PLIST_PATH" 2>/dev/null
 rm -f "$PLIST_PATH"
