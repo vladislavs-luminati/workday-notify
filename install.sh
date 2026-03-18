@@ -1,39 +1,25 @@
 #!/bin/bash
-# Install/update workday-notify launchd agent
+# Install/update workday-notify daemon (macOS launchd / Linux systemd)
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLIST_NAME="com.workday-notify"
-PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
+MAIN_SCRIPT="$SCRIPT_DIR/src/workday-notify.sh"
 
-# Unload if already running
-launchctl list | grep -q "$PLIST_NAME" && launchctl unload "$PLIST_PATH" 2>/dev/null || true
+source "$SCRIPT_DIR/src/banner.sh"
+print_banner
+echo "  Installing..."
+echo ""
 
-chmod +x "$SCRIPT_DIR/src/workday-notify.sh"
+# Load platform layer
+case "$(uname)" in
+    Darwin) source "$SCRIPT_DIR/src/platform/macos.sh" ;;
+    Linux)  source "$SCRIPT_DIR/src/platform/linux.sh" ;;
+    *) echo "Error: unsupported platform $(uname)"; exit 1 ;;
+esac
 
-cat > "$PLIST_PATH" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>$PLIST_NAME</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/bin/bash</string>
-        <string>$SCRIPT_DIR/src/workday-notify.sh</string>
-    </array>
-    <key>StartInterval</key>
-    <integer>600</integer>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/tmp/workday-notify.err</string>
-</dict>
-</plist>
-EOF
-
-launchctl load "$PLIST_PATH"
-echo "✓ Installed and loaded $PLIST_NAME (runs every 10 min)"
+platform_install_deps
+chmod +x "$MAIN_SCRIPT"
+platform_install_daemon "$MAIN_SCRIPT"
+echo ""
+echo "✓ Installed workday-notify (runs every 10 min)"
 echo "  Config: $SCRIPT_DIR/config.conf"
-echo "  Plist:  $PLIST_PATH"

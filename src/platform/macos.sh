@@ -41,7 +41,7 @@ platform_install_deps() {
 
 platform_install_daemon() {
     local script_path="$1"
-    local plist_name="com.vladislavs.workday"
+    local plist_name="com.workday-notify"
     local plist_path="$HOME/Library/LaunchAgents/$plist_name.plist"
 
     launchctl list 2>/dev/null | grep -q "$plist_name" && \

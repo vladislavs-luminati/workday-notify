@@ -1,39 +1,42 @@
 #!/bin/bash
-# workday-notify — one-command installer
+# workday-notify — one-command cross-platform installer
 # Usage: curl -sL <URL> | bash
 # Or:    bash setup.sh
 set -e
 
 INSTALL_DIR="$HOME/.workday-notify"
-PLIST_NAME="com.workday-notify"
-PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
+PLATFORM="$(uname)"
 
-echo "=== workday-notify installer ==="
+# Inline banner (setup.sh is self-contained for curl|bash)
+cat << 'BANNER'
 
-# Check macOS
-if [[ "$(uname)" != "Darwin" ]]; then
-    echo "Error: macOS required"; exit 1
-fi
+ __      __            _       _
+ \ \    / /           | |     | |
+  \ \  / /___   _ _ __| | ____| | __ _ _   _
+   \ \/ // _ \ | '_/ _` |/ _` | |/ _` | | | |
+    \  /| (_) || | | (_| | (_| | | (_| | |_| |
+     \/  \___/ |_|  \__,_|\__,_|_|\__,_|\__, |
+     _   _       _   _  __              |___/
+    | \ | |     | | (_)/ _|
+    |  \| | ___ | |_ _| |_ _   _
+    | . ` |/ _ \| __| |  _| | | |
+    | |\  | (_) | |_| | | | |_| |
+    |_| \_|\___/ \__|_|_|  \__, |
+                            __/ |
+                           |___/
+BANNER
+echo "  Installing..."
 
-# Install terminal-notifier if missing
-if ! command -v terminal-notifier &>/dev/null; then
-    echo "Installing terminal-notifier..."
-    if command -v brew &>/dev/null; then
-        brew install terminal-notifier
-    else
-        echo "Error: brew not found. Install Homebrew first: https://brew.sh"
-        exit 1
-    fi
-fi
-NOTIFIER_PATH="$(command -v terminal-notifier)"
-echo "  terminal-notifier: $NOTIFIER_PATH"
+case "$PLATFORM" in
+    Darwin) echo "  Platform: macOS" ;;
+    Linux)  echo "  Platform: Linux" ;;
+    *)      echo "Error: unsupported platform $PLATFORM"; exit 1 ;;
+esac
 
-# Unload existing agent
-launchctl list 2>/dev/null | grep -q "$PLIST_NAME" && \
-    launchctl unload "$PLIST_PATH" 2>/dev/null || true
+# Create install dir structure
+mkdir -p "$INSTALL_DIR/src/platform"
 
-# Create install dir
-mkdir -p "$INSTALL_DIR"
+# ── Write platform: macOS ──────────────────────────────────────
 
 # Write config (only if not already present — preserves user edits)
 if [[ ! -f "$INSTALL_DIR/config.conf" ]]; then
