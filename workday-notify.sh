@@ -41,22 +41,42 @@ late_msg=""
 late_sound="default"
 late_repeat=30
 late_cmd=""
-in_late=0
+
+# Parse [daily_update] section
+du_enabled=""
+du_after=""
+du_title=""
+du_msg=""
+du_sound="default"
+
+current_section=""
 while IFS= read -r line; do
     line="${line%%#*}"           # strip comments
     [[ -z "${line// }" ]] && continue
-    if [[ "$line" == "[late]" ]]; then in_late=1; continue; fi
-    if [[ "$line" == "["* ]]; then in_late=0; continue; fi
-    (( in_late )) || continue
+    if [[ "$line" == "["* ]]; then
+        current_section="${line//[\[\]]/}"
+        continue
+    fi
     key="${line%%=*}"; key="${key// }"
     val="${line#*=}"; val="${val## }"; val="${val%% }"; val="${val#\"}"; val="${val%\"}"
-    case "$key" in
-        after) late_after="$val" ;;
-        title) late_title="$val" ;;
-        message) late_msg="$val" ;;
-        sound) late_sound="$val" ;;
-        repeat) late_repeat="$val" ;;
-        command) late_cmd="$val" ;;
+    case "$current_section" in
+        late)
+            case "$key" in
+                after) late_after="$val" ;;
+                title) late_title="$val" ;;
+                message) late_msg="$val" ;;
+                sound) late_sound="$val" ;;
+                repeat) late_repeat="$val" ;;
+                command) late_cmd="$val" ;;
+            esac ;;
+        daily_update)
+            case "$key" in
+                enabled) du_enabled="$val" ;;
+                after) du_after="$val" ;;
+                title) du_title="$val" ;;
+                message) du_msg="$val" ;;
+                sound) du_sound="$val" ;;
+            esac ;;
     esac
 done < "$CONFIG"
 
@@ -93,6 +113,19 @@ while IFS= read -r line; do
         break
     fi
 done < "$CONFIG"
+
+# Check daily_update reminder (repeats every cycle until clicked)
+DU_MARKER="/tmp/workday-daily-update-$(date +%Y-%m-%d)"
+if [[ "$du_enabled" == "true" ]] && [[ -n "$du_after" ]] && [[ ! -f "$DU_MARKER" ]]; then
+    du_hour="${du_after%%:*}"; du_min="${du_after##*:}"
+    du_start=$(( 10#$du_hour * 60 + 10#$du_min ))
+    if (( NOW >= du_start && NOW < 1080 )); then
+        sleep 2
+        "$NOTIFIER" -title "$du_title" -message "$du_msg" \
+            -sound "$du_sound" -group "workday-daily-update" \
+            -execute "touch '$DU_MARKER'; open -a Slack" &
+    fi
+fi
 
 # Check late section if no schedule entry matched
 if (( !matched )) && [[ -n "$late_after" ]]; then

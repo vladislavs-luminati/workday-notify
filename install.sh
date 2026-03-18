@@ -24,7 +24,7 @@ cat > "$PLIST_PATH" << EOF
         <string>$SCRIPT_DIR/workday-notify.sh</string>
     </array>
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>600</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardErrorPath</key>
@@ -34,6 +34,6 @@ cat > "$PLIST_PATH" << EOF
 EOF
 
 launchctl load "$PLIST_PATH"
-echo "✓ Installed and loaded $PLIST_NAME (runs every 15 min)"
+echo "✓ Installed and loaded $PLIST_NAME (runs every 10 min)"
 echo "  Config: $SCRIPT_DIR/config.conf"
 echo "  Plist:  $PLIST_PATH"
