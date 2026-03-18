@@ -37,15 +37,7 @@ if [[ ! -f "$CONFIG" ]]; then
   exit 1
 fi
 
-now_minutes() {
-  local h m
-  h=$(date +%H); m=$(date +%M)
-  echo $((10#$h*60 + 10#$m))
-}
-
 HOUR=$(date +%H); MIN=$(date +%M); NOW=$((HOUR * 60 + MIN))
- # keep helper available for other uses
- # now_minutes() { ... }
 
 get_status() {
   # try to run `daily status` in a login shell and extract a compact summary
@@ -109,21 +101,49 @@ while IFS= read -r raw; do
       if [[ $line == *=* ]]; then
         key=${line%%=*}; val=${line#*=}
         key=${key// /}; val=${val## }; val=${val%% }
-        LATE[$key]=$val
+        # strip surrounding double quotes
+        val=${val#\"}; val=${val%\"}
+        case "$key" in
+          after) LATE_after=$val ;;
+          repeat) LATE_repeat=$val ;;
+          title) LATE_title=$val ;;
+          message) LATE_message=$val ;;
+          sound) LATE_sound=$val ;;
+          command) LATE_command=$val ;;
+        esac
       fi
       ;;
     daily_update)
       if [[ $line == *=* ]]; then
         key=${line%%=*}; val=${line#*=}
         key=${key// /}; val=${val## }; val=${val%% }
-        DU[$key]=$val
+        val=${val#\"}; val=${val%\"}
+        case "$key" in
+          enabled) DU_enabled=$val ;;
+          after) DU_after=$val ;;
+          title) DU_title=$val ;;
+          message) DU_message=$val ;;
+          sound) DU_sound=$val ;;
+        esac
       fi
       ;;
     lunch)
       if [[ $line == *=* ]]; then
         key=${line%%=*}; val=${line#*=}
         key=${key// /}; val=${val## }; val=${val%% }
-        LUNCH[$key]=$val
+        val=${val#\"}; val=${val%\"}
+        case "$key" in
+          enabled) LUNCH_enabled=$val ;;
+          start) LUNCH_start=$val ;;
+          end) LUNCH_end=$val ;;
+          logout_command) LUNCH_logout_command=$val ;;
+          login_command) LUNCH_login_command=$val ;;
+          sound) LUNCH_sound=$val ;;
+          logout_title) LUNCH_logout_title=$val ;;
+          logout_message) LUNCH_logout_message=$val ;;
+          login_title) LUNCH_login_title=$val ;;
+          login_message) LUNCH_login_message=$val ;;
+        esac
       fi
       ;;
   esac
@@ -139,8 +159,17 @@ for entry in "${SCHEDULE[@]:-}"; do
   # parse time
   th=${t%%:*}; tm=${t##*:}
   tmin=$((10#$th*60 + 10#$tm))
-  if (( NOW >= tmin && NOW < tmin + window )); then
-    platform_notify "$title" "$message" "$sound" "$cmd"
+    if (( NOW >= tmin && NOW < tmin + window )); then
+    # Optionally append daily status for non-login notifications
+    msg="$message"
+    cmd_trimmed=${cmd## } ; cmd_trimmed=${cmd_trimmed%% }
+    if [[ $cmd_trimmed != "daily login" ]]; then
+      status=$(get_status)
+      if [[ -n $status ]]; then
+        msg="$msg ($status)"
+      fi
+    fi
+    platform_notify "$title" "$msg" "$sound" "$cmd"
     matched=1
     break
   fi
@@ -162,11 +191,12 @@ if [[ $LUNCH_enabled == true && $LUNCH_start != none && $LUNCH_end != none ]]; t
 fi
 
 # Daily update: send once per day until marker touched
-if [[ $DU_enabled == true && $DU_after != "" ]]; then
+if [[ $matched -eq 0 && $DU_enabled == true && $DU_after != "" ]]; then
   du_h=${DU_after%%:*}; du_m=${DU_after##*:}
   du_start=$((10#$du_h*60 + 10#$du_m))
   marker="/tmp/workday-daily-update-$(date +%Y-%m-%d)"
-  if (( NOW >= du_start )) && [[ ! -f $marker ]]; then
+  # Only prompt for daily update before 18:00 (1080 minutes)
+  if (( NOW >= du_start && NOW < 1080 )) && [[ ! -f $marker ]]; then
     platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker"
     matched=1
   fi

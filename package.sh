@@ -45,13 +45,41 @@ cat > "$OUT" << HEADER
 # Or:    bash setup.sh
 set -e
 
+# Ensure a sufficiently new Bash (>=4). If running under older bash (macOS /bin/bash v3),
+# try common locations for newer bash (Homebrew). If found, re-exec this script with it.
+ensure_modern_bash() {
+    # If running under bash and version >=4, OK
+    if [ -n "\${BASH_VERSION-}" ]; then
+        major=\${BASH_VERSION%%.*}
+        if [ "\$major" -ge 4 ]; then
+            return 0
+        fi
+    fi
+
+    # Candidate locations to try (arm/Intel Homebrew + common paths)
+    for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash /usr/bin/bash /bin/bash; do
+        if [ -x "\$candidate" ]; then
+            ver=\$("\$candidate" -c 'printf "\\%s\\n" "\${BASH_VERSION:-0}"' 2>/dev/null || echo "")
+            major=\${ver%%.*}
+            if [ -n "\$major" ] && [ "\$major" -ge 4 ]; then
+                exec "\$candidate" "\$0" "\$@"
+            fi
+        fi
+    done
+
+    echo "Warning: Bash >=4 not found; installer may fail on older systems." >&2
+    return 1
+}
+
+ensure_modern_bash
+
 INSTALL_DIR="\$HOME/.workday-notify"
 VERSION="$VERSION"
 
 # Extract embedded archive
 extract() {
     local archive_start
-    archive_start=\$(awk '/^__ARCHIVE__\$/{print NR+1; exit}' "\$0")
+    archive_start=\$(awk '/^__ARCHIVE__\$/ {print NR+1; exit}' "\$0")
     tail -n +"\$archive_start" "\$0" | base64 -d | tar xzf - -C "\$INSTALL_DIR"
 }
 
