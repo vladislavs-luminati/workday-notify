@@ -10,8 +10,8 @@ if [[ ! -f "$CONFIG" ]]; then
     exit 1
 fi
 
-HOUR=$(date +%H)
-MIN=$(date +%M)
+HOUR=$(date +%-H)
+MIN=$(date +%-M)
 NOW=$((HOUR * 60 + MIN))
 
 notify() {
