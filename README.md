@@ -1,8 +1,54 @@
 # workday-notify
 
-macOS notification daemon that reminds you to log in, take breaks, and log out on time.
+macOS notification daemon that reminds you to log in, take breaks, and log out
+on time. Click a notification to run a command (e.g. `daily login`).
 
 Runs via `launchd` every 15 minutes. Schedule is defined in a simple config file.
+
+## What it looks like
+
+```
+┌─────────────────────────────────────────────┐
+│ 🔔  Good morning!                           │
+│ Time to log in and start your day.          │
+│                                    [Click → daily login]
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ 🔔  Break time                              │
+│ 10:30 — stand up, stretch. (Total: 2h 14m) │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ 🔔  Log out!                                │
+│ 18:00 — work day is over. (Total: 8h 42m)  │
+│                                   [Click → daily logout]
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ 🔔  ⚠️ Working late!                        │
+│ It's 19:30. Log out! (Total: 10h 3m)       │
+│                                   [Click → daily logout]
+└─────────────────────────────────────────────┘
+```
+
+## Features
+
+- **Native macOS notifications** via `terminal-notifier` (no misleading "Show"
+  button like `osascript`)
+- **Click actions** — clicking a notification opens Terminal and runs a command
+  (e.g. `daily login`, `daily logout`)
+- **Daily status** — break/wrap-up/late notifications automatically append your
+  `daily status` total hours
+- **Configurable late reminders** — set when they start and how often they
+  repeat (`repeat = 30` for every 30 min)
+- **Simple config** — one text file, no YAML/JSON
+
+## Requirements
+
+- macOS
+- [terminal-notifier](https://github.com/julienXX/terminal-notifier):
+  `brew install terminal-notifier`
 
 ## Install
 
@@ -24,21 +70,43 @@ Edit `config.conf` to change the schedule:
 
 ```
 [schedule]
-08:00 | 75  | Good morning!  | Time to log in and start your day.
+# HH:MM | window_min | title | message | sound | command
+08:00 | 75  | Good morning!  | Time to log in and start your day. | | daily login
 10:30 | 15  | Break time     | Stand up, stretch, grab water.
 12:30 | 15  | Lunch break    | Step away from the screen.
-...
+17:00 | 15  | Wrapping up    | Start finishing up, push your work.
+18:00 | 15  | Log out!       | Work day is over. Log out and rest. | Blow | daily logout
 
 [late]
 after = 18:30
+repeat = 30
 title = "⚠️ Working late!"
-message = "It's {time}. You should have logged out by now!"
+message = "It's {time}. You should have logged out by now! {status}"
 sound = Sosumi
+command = daily logout
 ```
 
-Each schedule line: `HH:MM | window_minutes | title | message | sound`
+### Schedule fields
 
-The `[late]` section repeats every 15 min after the specified time. `{time}` is replaced with the current time.
+| # | Field | Required | Description |
+|---|-------|----------|-------------|
+| 1 | Time | yes | `HH:MM` — when to trigger |
+| 2 | Window | yes | Minutes the notification stays active |
+| 3 | Title | yes | Notification title |
+| 4 | Message | yes | Notification body |
+| 5 | Sound | no | macOS sound name (`default`, `Blow`, `Sosumi`, etc.) |
+| 6 | Command | no | Shell command to run when clicked |
+
+### Late section
+
+| Key | Description |
+|-----|-------------|
+| `after` | `HH:MM` — when late reminders start |
+| `repeat` | Minutes between repeats (default: 30) |
+| `title` | Notification title |
+| `message` | Body text. `{time}` = current time, `{status}` = daily hours |
+| `sound` | macOS sound name |
+| `command` | Shell command to run when clicked |
 
 Changes take effect on the next 15-min cycle — no reload needed.
 
@@ -48,6 +116,12 @@ Run manually to see the notification for the current time:
 
 ```bash
 bash workday-notify.sh
+```
+
+Override config path (useful for testing from another location):
+
+```bash
+WORKDAY_CONFIG=/path/to/config.conf bash workday-notify.sh
 ```
 
 ## Files
