@@ -21,7 +21,7 @@ run_at() {
     # 3. Stubs get_status
     local tmp="/tmp/workday-notify-test-$$.sh"
     sed \
-        -e "s|NOW=\$((HOUR \* 60 + MIN))|NOW=$fake_now|" \
+        -e "s|^NOW=\$((.*))$|NOW=$fake_now|" \
         -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
         "$SRC_DIR/workday-notify.sh" | \
     awk '/^get_status\(\)/{found=1} found && /^}/{print "get_status() { echo \"Total: 4h 30m\"; }"; found=0; next} !found' \

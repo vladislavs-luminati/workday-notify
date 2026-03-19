@@ -37,7 +37,10 @@ if [[ ! -f "$CONFIG" ]]; then
   exit 1
 fi
 
-HOUR=$(date +%H); MIN=$(date +%M); NOW=$((HOUR * 60 + MIN))
+HOUR=$(date +%H)
+MIN=$(date +%M)
+# Force base-10 to avoid octal parsing errors for 08/09.
+NOW=$((10#$HOUR * 60 + 10#$MIN))
 
 get_status() {
   # run configured status command in a login shell and extract a compact summary
