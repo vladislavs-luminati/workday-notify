@@ -140,6 +140,32 @@ command = daily logout
 
 Changes take effect on the next 15-min cycle — no reload needed.
 
+### Example prompts to update config
+
+Use these prompts with your coding assistant to update `config.conf` automatically.
+
+Contractor profile:
+
+```text
+Please update `config.conf` for me.
+I work as a contractor from 10:00 to 19:00, with 15-minute breaks at 11:30, 14:30, and 16:30.
+My lunch is 13:30-14:30, and I want both lunch logout and lunch login enabled.
+If I work late, start late reminders at 19:30 and repeat them every 30 minutes.
+Remind me about my daily updates 15min after my work start.
+Edit only `config.conf` and do not change script files.
+```
+
+Regular worker profile:
+
+```text
+Please update `config.conf` for me.
+I work 9:00-18:00, with a 15-minute break every 2 hours.
+Set lunch to 13:00-14:00 and keep both lunch logout and lunch login enabled.
+For late reminders, start at 18:30 and repeat every 10 minutes.
+Remind me about my daily updates 15min after my work start.
+Edit only `config.conf` and do not change script files.
+```
+
 ## Test
 
 Run manually to see the notification for the current time:

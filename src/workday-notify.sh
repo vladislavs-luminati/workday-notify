@@ -40,21 +40,40 @@ fi
 HOUR=$(date +%H); MIN=$(date +%M); NOW=$((HOUR * 60 + MIN))
 
 get_status() {
-  # try to run `daily status` in a login shell and extract a compact summary
-  bash -l -c 'daily status 2>/dev/null' 2>/dev/null | sed -n '1,3p' | tr '\n' ' ' | sed 's/^ *//;s/ *$//'
+  # run configured status command in a login shell and extract a compact summary
+  bash -l -c "$STATUS_COMMAND 2>/dev/null" 2>/dev/null | sed -n '1,3p' | tr '\n' ' ' | sed 's/^ *//;s/ *$//'
 }
 
 # Configuration defaults
 LUNCH_enabled=true
 LUNCH_start=none
 LUNCH_end=none
-LUNCH_logout_command=""
-LUNCH_login_command=""
+LUNCH_logout_enabled=true
+LUNCH_login_enabled=true
 LUNCH_sound=Glass
 LUNCH_logout_title="Lunch time"
 LUNCH_logout_message="Time for lunch"
 LUNCH_login_title="Back from lunch"
 LUNCH_login_message="Back from lunch"
+
+# Command defaults (can be overridden in config under [commands])
+LOGIN_COMMAND="daily login"
+LOGOUT_COMMAND="daily logout"
+STATUS_COMMAND="daily status"
+
+resolve_command_key() {
+  local key="$1"
+  case "$key" in
+    "") echo "" ;;
+    login) echo "$LOGIN_COMMAND" ;;
+    logout) echo "$LOGOUT_COMMAND" ;;
+    status) echo "$STATUS_COMMAND" ;;
+    *)
+      echo "Unknown command key: $key (expected one of: login, logout, status)" >&2
+      return 1
+      ;;
+  esac
+}
 
 LATE_after=""
 LATE_repeat=30
@@ -84,7 +103,7 @@ while IFS= read -r raw; do
 
   case "$current_section" in
     schedule)
-      # Expect: TIME | WINDOW | TITLE | MESSAGE | SOUND? | COMMAND?
+      # Expect: TIME | WINDOW | TITLE | MESSAGE | SOUND? | COMMAND_KEY?
       if [[ $line == *":"* ]]; then
         IFS='|' read -r time window title message sound cmd <<< "$line"
         # trim
@@ -136,13 +155,25 @@ while IFS= read -r raw; do
           enabled) LUNCH_enabled=$val ;;
           start) LUNCH_start=$val ;;
           end) LUNCH_end=$val ;;
-          logout_command) LUNCH_logout_command=$val ;;
-          login_command) LUNCH_login_command=$val ;;
+          logout_enabled) LUNCH_logout_enabled=$val ;;
+          login_enabled) LUNCH_login_enabled=$val ;;
           sound) LUNCH_sound=$val ;;
           logout_title) LUNCH_logout_title=$val ;;
           logout_message) LUNCH_logout_message=$val ;;
           login_title) LUNCH_login_title=$val ;;
           login_message) LUNCH_login_message=$val ;;
+        esac
+      fi
+      ;;
+    commands)
+      if [[ $line == *=* ]]; then
+        key=${line%%=*}; val=${line#*=}
+        key=${key// /}; val=${val## }; val=${val%% }
+        val=${val#\"}; val=${val%\"}
+        case "$key" in
+          login) LOGIN_COMMAND=$val ;;
+          logout) LOGOUT_COMMAND=$val ;;
+          status|status_command) STATUS_COMMAND=$val ;;
         esac
       fi
       ;;
@@ -153,7 +184,7 @@ matched=0
 
 # Handle schedule entries
 for entry in "${SCHEDULE[@]:-}"; do
-  IFS='|' read -r t window title message sound cmd <<< "$entry"
+  IFS='|' read -r t window title message sound cmd_key <<< "$entry"
   window=${window:-15}
   sound=${sound:-default}
   # parse time
@@ -162,14 +193,15 @@ for entry in "${SCHEDULE[@]:-}"; do
     if (( NOW >= tmin && NOW < tmin + window )); then
     # Optionally append daily status for non-login notifications
     msg="$message"
-    cmd_trimmed=${cmd## } ; cmd_trimmed=${cmd_trimmed%% }
-    if [[ $cmd_trimmed != "daily login" ]]; then
+    cmd_trimmed=${cmd_key## } ; cmd_trimmed=${cmd_trimmed%% }
+    if [[ $cmd_trimmed != "login" ]]; then
       status=$(get_status)
       if [[ -n $status ]]; then
         msg="$msg ($status)"
       fi
     fi
-    platform_notify "$title" "$msg" "$sound" "$cmd"
+    resolved_cmd=$(resolve_command_key "$cmd_trimmed" || true)
+    platform_notify "$title" "$msg" "$sound" "$resolved_cmd"
     matched=1
     break
   fi
@@ -181,11 +213,13 @@ if [[ $LUNCH_enabled == true && $LUNCH_start != none && $LUNCH_end != none ]]; t
   le_h=${LUNCH_end%%:*}; le_m=${LUNCH_end##*:}
   l_start=$((10#$ls_h*60 + 10#$ls_m))
   l_end=$((10#$le_h*60 + 10#$le_m))
-  if (( NOW >= l_start && NOW < l_start + 15 )); then
-    platform_notify "$LUNCH_logout_title" "$LUNCH_logout_message" "$LUNCH_sound" "$LUNCH_logout_command"
+  if [[ $LUNCH_logout_enabled == true ]] && (( NOW >= l_start && NOW < l_start + 15 )); then
+    cmd=$(resolve_command_key "logout" || true)
+    platform_notify "$LUNCH_logout_title" "$LUNCH_logout_message" "$LUNCH_sound" "$cmd"
     matched=1
-  elif (( NOW >= l_end && NOW < l_end + 15 )); then
-    platform_notify "$LUNCH_login_title" "$LUNCH_login_message" "$LUNCH_sound" "$LUNCH_login_command"
+  elif [[ $LUNCH_login_enabled == true ]] && (( NOW >= l_end && NOW < l_end + 15 )); then
+    cmd=$(resolve_command_key "login" || true)
+    platform_notify "$LUNCH_login_title" "$LUNCH_login_message" "$LUNCH_sound" "$cmd"
     matched=1
   fi
 fi
@@ -214,7 +248,8 @@ if [[ $matched -eq 0 && $LATE_after != "" ]]; then
       status=$(get_status)
       msg=${LATE_message//\{time\}/$(date +%H:%M)}
       msg=${msg//\{status\}/$status}
-      platform_notify "$LATE_title" "$msg" "$LATE_sound" "$LATE_command"
+      resolved_cmd=$(resolve_command_key "$LATE_command" || true)
+      platform_notify "$LATE_title" "$msg" "$LATE_sound" "$resolved_cmd"
     fi
   fi
 fi
