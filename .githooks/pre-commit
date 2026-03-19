@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "[pre-commit] bash syntax check"
+bash -n src/workday-notify.sh
+
+echo "[pre-commit] running tests"
+bash tests/test_schedule.sh
+
+echo "[pre-commit] OK"

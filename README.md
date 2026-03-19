@@ -188,6 +188,18 @@ You can send a single test notification (no daemon) with:
 bash src/workday-notify.sh --test
 ```
 
+## Git pre-commit hook
+
+This repo includes a pre-commit hook in `.githooks/pre-commit` that runs:
+- `bash -n src/workday-notify.sh`
+- `bash tests/test_schedule.sh`
+
+Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Packaging / one-file installer
 
 Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.1.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.1` release):
