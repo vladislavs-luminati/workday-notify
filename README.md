@@ -145,6 +145,17 @@ status = daily status
 
 Changes take effect on the next 15-min cycle — no reload needed.
 
+### Daily update section
+
+| Key | Description |
+|-----|-------------|
+| `enabled` | Enable/disable daily update reminders |
+| `after` | `HH:MM` — when daily update reminders start |
+| `title` | Notification title |
+| `message` | Notification body |
+| `sound` | Notification sound |
+| `slack` | Open Slack on daily update (`true`/`false`). Defaults to `true` on macOS and `false` on Linux. |
+
 ### Example prompts to update config
 
 Use these prompts with your coding assistant to update `config.conf` automatically.

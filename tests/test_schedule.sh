@@ -111,6 +111,16 @@ assert_log_not_contains "DAILY_UPDATE" "daily update disabled in config"
 
 echo ""
 
+# ─── Daily update Slack setting ────────────────────────────────
+
+echo "Daily update Slack setting:"
+
+rm -f /tmp/workday-daily-update-*
+run_at 560 "$TEST_DIR/fixtures/daily_update_no_slack.conf"
+assert_log_contains "DAILY_UPDATE|Daily update|Send update|Hero|/tmp/workday-daily-update-$(date +%Y-%m-%d)|false" "daily update honors slack=false"
+
+echo ""
+
 # ─── Daily update before start time ───────────────────────────
 
 echo "Daily update timing:"

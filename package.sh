@@ -1,6 +1,7 @@
 #!/bin/bash
 # package.sh — builds dist/setup.sh as a self-extracting installer
 # Embeds all distribution files as a base64-encoded tarball.
+# The generated installer must work both as a file and when piped from curl.
 # Version is read from the latest git tag.
 #
 # Usage: bash package.sh
@@ -59,7 +60,7 @@ ensure_modern_bash() {
     # Candidate locations to try (arm/Intel Homebrew + common paths)
     for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash /usr/bin/bash /bin/bash; do
         if [ -x "\$candidate" ]; then
-            ver=\$("\$candidate" -c 'printf "\\%s\\n" "\${BASH_VERSION:-0}"' 2>/dev/null || echo "")
+            ver=\$("\$candidate" -c 'printf "%s\\n" "\${BASH_VERSION:-0}"' 2>/dev/null || echo "")
             major=\${ver%%.*}
             if [ -n "\$major" ] && [ "\$major" -ge 4 ]; then
                 exec "\$candidate" "\$0" "\$@"
@@ -76,11 +77,15 @@ ensure_modern_bash
 INSTALL_DIR="\$HOME/.workday-notify"
 VERSION="$VERSION"
 
-# Extract embedded archive
+decode_base64() {
+    base64 -d 2>/dev/null || base64 -D
+}
+
+# Extract embedded archive (stream-safe: works with curl | bash)
 extract() {
-    local archive_start
-    archive_start=\$(awk '/^__ARCHIVE__\$/ {print NR+1; exit}' "\$0")
-    tail -n +"\$archive_start" "\$0" | base64 -d | tar xzf - -C "\$INSTALL_DIR"
+    decode_base64 <<'__WORKDAY_NOTIFY_PAYLOAD__' | tar xzf - -C "\$INSTALL_DIR"
+$PAYLOAD
+__WORKDAY_NOTIFY_PAYLOAD__
 }
 
 # Preserve existing config
@@ -104,11 +109,7 @@ echo "  Uninstall: bash \$INSTALL_DIR/uninstall.sh"
 echo ""
 echo "Edit \$INSTALL_DIR/config.conf to customize your schedule."
 exit 0
-__ARCHIVE__
 HEADER
-
-# Append the payload
-echo "$PAYLOAD" >> "$OUT"
 chmod +x "$OUT"
 
 echo "✓ Created dist/workday-notify-${VERSION}.sh ($(wc -c < "$OUT" | tr -d ' ') bytes)"

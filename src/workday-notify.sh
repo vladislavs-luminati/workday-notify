@@ -16,6 +16,11 @@ esac
 
 platform_init || exit 1
 
+IS_MACOS=false
+case "$(uname)" in
+  Darwin) IS_MACOS=true ;;
+esac
+
 usage() {
   cat <<EOF
 Usage: $0 [--test|-t]
@@ -90,6 +95,10 @@ DU_after=""
 DU_title="Daily update"
 DU_message="Send your daily status update"
 DU_sound=Hero
+DU_slack=false
+if [[ $IS_MACOS == true ]]; then
+  DU_slack=true
+fi
 
 SCHEDULE=()
 
@@ -146,6 +155,7 @@ while IFS= read -r raw; do
           title) DU_title=$val ;;
           message) DU_message=$val ;;
           sound) DU_sound=$val ;;
+          slack) DU_slack=$val ;;
         esac
       fi
       ;;
@@ -234,7 +244,7 @@ if [[ $matched -eq 0 && $DU_enabled == true && $DU_after != "" ]]; then
   marker="/tmp/workday-daily-update-$(date +%Y-%m-%d)"
   # Only prompt for daily update before 18:00 (1080 minutes)
   if (( NOW >= du_start && NOW < 1080 )) && [[ ! -f $marker ]]; then
-    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker"
+    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker" "$DU_slack"
     matched=1
   fi
 fi

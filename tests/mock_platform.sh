@@ -13,7 +13,7 @@ platform_notify() {
 }
 
 platform_notify_daily_update() {
-    echo "DAILY_UPDATE|$1|$2|$3|$4" >> "$MOCK_LOG"
+    echo "DAILY_UPDATE|$1|$2|$3|$4|$5" >> "$MOCK_LOG"
     # Simulate click: create the marker
     touch "$4"
 }

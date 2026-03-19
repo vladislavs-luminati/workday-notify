@@ -20,10 +20,14 @@ platform_notify() {
 }
 
 platform_notify_daily_update() {
-    local title="$1" msg="$2" sound="${3:-default}" marker="$4"
+    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}"
+    local execute_cmd="touch '$marker'"
+    if [[ "$open_slack" == "true" ]]; then
+        execute_cmd="$execute_cmd; open -a Slack"
+    fi
     "$NOTIFIER" -title "$title" -message "$msg" \
         -sound "$sound" -group "workday-daily-update" \
-        -execute "touch '$marker'; open -a Slack" &
+        -execute "$execute_cmd" &
 }
 
 platform_install_deps() {
