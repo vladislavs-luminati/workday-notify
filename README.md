@@ -58,10 +58,10 @@ Note about Bash: the main script uses Bash features. On Linux the system Bash is
 Install directly from the GitHub release asset (recommended):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.1.sh | bash
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.2.sh | bash
 ```
 
-This downloads the self-extracting installer published on the `v1.0.1` release and runs it.
+This downloads the self-extracting installer published on the `v1.0.2` release and runs it.
 
 This downloads and runs the setup script which:
 1. Installs `terminal-notifier` via Homebrew (if missing)
@@ -70,14 +70,14 @@ This downloads and runs the setup script which:
 4. Preserves your existing `config.conf` if upgrading
 
 > **Note:** The repo must be public for the `curl` URL to work. For private
-> repos, clone and run `bash setup.sh` locally.
+> repos, clone and run `bash install.sh` locally.
 
 ## Install (from clone)
 
 ```bash
 git clone https://github.com/vladislavs-luminati/workday-notify.git
 cd workday-notify
-bash setup.sh
+bash install.sh
 ```
 
 Or install from the project directory:
@@ -100,12 +100,12 @@ Edit `config.conf` to change the schedule:
 
 ```
 [schedule]
-# HH:MM | window_min | title | message | sound | command
-08:00 | 75  | Good morning!  | Time to log in and start your day. | | daily login
+# HH:MM | window_min | title | message | sound | command_key
+08:00 | 75  | Good morning!  | Time to log in and start your day. | | login
 10:30 | 15  | Break time     | Stand up, stretch, grab water.
 12:30 | 15  | Lunch break    | Step away from the screen.
 17:00 | 15  | Wrapping up    | Start finishing up, push your work.
-18:00 | 15  | Log out!       | Work day is over. Log out and rest. | Blow | daily logout
+18:00 | 15  | Log out!       | Work day is over. Log out and rest. | Blow | logout
 
 [late]
 after = 18:30
@@ -113,7 +113,12 @@ repeat = 30
 title = "⚠️ Working late!"
 message = "It's {time}. You should have logged out by now! {status}"
 sound = Sosumi
-command = daily logout
+command = logout
+
+[commands]
+login = daily login
+logout = daily logout
+status = daily status
 ```
 
 ### Schedule fields
@@ -125,7 +130,7 @@ command = daily logout
 | 3 | Title | yes | Notification title |
 | 4 | Message | yes | Notification body |
 | 5 | Sound | no | macOS sound name (`default`, `Blow`, `Sosumi`, etc.) |
-| 6 | Command | no | Shell command to run when clicked |
+| 6 | Command key | no | One of `login`, `logout`, `status` |
 
 ### Late section
 
@@ -136,7 +141,7 @@ command = daily logout
 | `title` | Notification title |
 | `message` | Body text. `{time}` = current time, `{status}` = daily hours |
 | `sound` | macOS sound name |
-| `command` | Shell command to run when clicked |
+| `command` | Command key: `login`, `logout`, or `status` |
 
 Changes take effect on the next 15-min cycle — no reload needed.
 
@@ -171,7 +176,7 @@ Edit only `config.conf` and do not change script files.
 Run manually to see the notification for the current time:
 
 ```bash
-bash workday-notify.sh
+bash src/workday-notify.sh
 ```
 
 Override config path (useful for testing from another location):
@@ -191,6 +196,7 @@ bash src/workday-notify.sh --test
 ## Git pre-commit hook
 
 This repo includes a pre-commit hook in `.githooks/pre-commit` that runs:
+- secret scan (gitleaks if available, otherwise staged diff regex fallback)
 - `bash -n src/workday-notify.sh`
 - `bash tests/test_schedule.sh`
 
@@ -202,10 +208,10 @@ git config core.hooksPath .githooks
 
 ## Packaging / one-file installer
 
-Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.1.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.1` release):
+Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.2.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.2` release):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.1.sh -o workday-notify.sh
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.2.sh -o workday-notify.sh
 bash workday-notify.sh
 ```
 
