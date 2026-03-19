@@ -23,19 +23,48 @@ esac
 
 usage() {
   cat <<EOF
-Usage: $0 [--test|-t]
+Usage: $0 [--test|-t] [--action <command>] [--message <text>]
 EOF
 }
 
 TEST_MODE=false
+TEST_ACTION_OVERRIDE=""
+TEST_MESSAGE="This is a test notification."
 
-if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
-  usage; exit 0
-fi
-
-if [[ ${1:-} == "--test" || ${1:-} == "-t" ]]; then
-  TEST_MODE=true
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      usage; exit 0
+      ;;
+    --test|-t)
+      TEST_MODE=true
+      shift
+      ;;
+    --action)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --action" >&2
+        usage
+        exit 1
+      fi
+      TEST_ACTION_OVERRIDE="$2"
+      shift 2
+      ;;
+    --message)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --message" >&2
+        usage
+        exit 1
+      fi
+      TEST_MESSAGE="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 HOUR=$(date +%H)
 MIN=$(date +%M)
@@ -197,7 +226,10 @@ elif [[ $TEST_MODE != true ]]; then
 fi
 
 if [[ $TEST_MODE == true ]]; then
-  platform_notify "Workday Notify - Test" "This is a test notification." "default" "$TEST_COMMAND"
+  if [[ -n "$TEST_ACTION_OVERRIDE" ]]; then
+    TEST_COMMAND="$TEST_ACTION_OVERRIDE"
+  fi
+  platform_notify "Workday Notify - Test" "$TEST_MESSAGE" "default" "$TEST_COMMAND"
   exit 0
 fi
 

@@ -211,6 +211,12 @@ bash src/workday-notify.sh --test
 The test notification is actionable and runs the command configured as
 `[commands].test` (default: `whoami`).
 
+You can override the test action and message ad-hoc:
+
+```bash
+bash src/workday-notify.sh --test --action "whoami" --message "Apply to run test action"
+```
+
 ## Git pre-commit hook
 
 This repo includes a pre-commit hook in `.githooks/pre-commit` that runs:
