@@ -27,9 +27,9 @@ ensure_not_headless() {
 run_command_in_terminal() {
     local cmd="$1"
     if command -v gnome-terminal &>/dev/null; then
-        gnome-terminal -- bash -l -c "$cmd; exec bash" &
+        gnome-terminal -- bash -c "$cmd; echo; read -r -p 'Press Enter to close... '" &
     elif command -v xterm &>/dev/null; then
-        xterm -e "bash -l -c '$cmd; exec bash'" &
+        xterm -e "bash -c '$cmd; echo; read -r -p \"Press Enter to close... \"'" &
     fi
 }
 

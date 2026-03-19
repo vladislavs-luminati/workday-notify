@@ -1,6 +1,28 @@
 #!/bin/bash
 # macOS platform functions for workday-notify
 
+prompt_apply_dialog() {
+    local title="$1" msg="$2"
+    local result
+    result=$(NOTIFY_TITLE="$title" NOTIFY_MESSAGE="$msg" osascript <<'APPLESCRIPT'
+set t to system attribute "NOTIFY_TITLE"
+set m to system attribute "NOTIFY_MESSAGE"
+try
+    set dialogResult to display dialog m with title t buttons {"Dismiss", "Apply"} default button "Apply"
+    return button returned of dialogResult
+on error number -128
+    return "Dismiss"
+end try
+APPLESCRIPT
+)
+    [[ "$result" == "Apply" ]]
+}
+
+run_terminal_action() {
+    local cmd="$1"
+    osascript -e 'tell app "Terminal" to activate' -e "tell app \"Terminal\" to do script \"source ~/.profile; $cmd\"" &
+}
+
 platform_init() {
     NOTIFIER="$(command -v terminal-notifier 2>/dev/null || echo /opt/homebrew/bin/terminal-notifier)"
     if [[ ! -x "$NOTIFIER" ]]; then
@@ -11,24 +33,23 @@ platform_init() {
 
 platform_notify() {
     local title="$1" msg="$2" sound="${3:-default}" cmd="$4"
-    local args=(-title "$title" -message "$msg" -sound "$sound"
-                -group "workday-notify")
     if [[ -n "$cmd" ]]; then
-        args+=(-actions "Apply")
-        args+=(-execute "osascript -e 'tell app \"Terminal\" to activate' -e 'tell app \"Terminal\" to do script \"source ~/.profile; $cmd\"'")
+        if prompt_apply_dialog "$title" "$msg"; then
+            run_terminal_action "$cmd"
+        fi
+        return
     fi
-    "$NOTIFIER" "${args[@]}" &
+    "$NOTIFIER" -title "$title" -message "$msg" -sound "$sound" -group "workday-notify" &
 }
 
 platform_notify_daily_update() {
     local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}"
-    local execute_cmd="touch '$marker'"
-    if [[ "$open_slack" == "true" ]]; then
-        execute_cmd="$execute_cmd; open -a Slack"
+    if prompt_apply_dialog "$title" "$msg"; then
+        touch "$marker"
+        if [[ "$open_slack" == "true" ]]; then
+            open -a Slack
+        fi
     fi
-    "$NOTIFIER" -title "$title" -message "$msg" \
-        -sound "$sound" -group "workday-daily-update" -actions "Apply" \
-        -execute "$execute_cmd" &
 }
 
 platform_install_deps() {
