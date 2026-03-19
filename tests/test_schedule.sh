@@ -74,6 +74,26 @@ assert_log_contains "NOTIFY|⚠️ Working late!" "18:30 triggers late (repeat=3
 run_at 1095  # 18:15 — between boundaries (15 min after, but repeat=30)
 assert_log_not_contains "NOTIFY|⚠️ Working late!" "18:15 does NOT trigger (off boundary)"
 
+run_at 1147  # 19:07 — jittered timer run within 10-min grace window (fresh bucket)
+assert_log_contains "NOTIFY|⚠️ Working late!" "19:07 triggers late within grace window"
+
+# Marker dedupe: same bucket should not notify twice
+> "$MOCK_LOG"
+late_tmp="/tmp/workday-notify-test-late-$$.sh"
+sed \
+    -e "s|^NOW=\$((.*))$|NOW=1147|" \
+    -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
+    "$SRC_DIR/workday-notify.sh" | \
+    awk '/^get_status\(\)/{found=1} found && /^}/{print "get_status() { echo \"Total: 4h 30m\"; }"; found=0; next} !found' \
+    > "$late_tmp"
+WORKDAY_CONFIG="$TEST_DIR/fixtures/default.conf" bash "$late_tmp" 2>/dev/null
+sleep 0.5
+> "$MOCK_LOG"
+WORKDAY_CONFIG="$TEST_DIR/fixtures/default.conf" bash "$late_tmp" 2>/dev/null
+sleep 0.5
+rm -f "$late_tmp"
+assert_log_not_contains "NOTIFY|⚠️ Working late!" "late reminder de-duplicates within same bucket"
+
 echo ""
 
 # ─── Daily update ──────────────────────────────────────────────

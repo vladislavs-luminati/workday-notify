@@ -4,15 +4,17 @@
 prompt_apply_dialog() {
     local title="$1" msg="$2"
     local result
-    result=$(NOTIFY_TITLE="$title" NOTIFY_MESSAGE="$msg" osascript <<'APPLESCRIPT'
-set t to system attribute "NOTIFY_TITLE"
-set m to system attribute "NOTIFY_MESSAGE"
-try
-    set dialogResult to display dialog m with title t buttons {"Dismiss", "Apply"} default button "Apply"
-    return button returned of dialogResult
-on error number -128
-    return "Dismiss"
-end try
+    result=$(osascript - "$title" "$msg" <<'APPLESCRIPT'
+on run argv
+    set t to item 1 of argv
+    set m to item 2 of argv
+    try
+        set dialogResult to display dialog m with title t buttons {"Dismiss", "Apply"} default button "Apply"
+        return button returned of dialogResult
+    on error number -128
+        return "Dismiss"
+    end try
+end run
 APPLESCRIPT
 )
     [[ "$result" == "Apply" ]]

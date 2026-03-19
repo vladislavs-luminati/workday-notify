@@ -110,6 +110,7 @@ resolve_command_key() {
 
 LATE_after=""
 LATE_repeat=30
+LATE_grace_min=10
 LATE_title="⚠️ Working late!"
 LATE_message="You should have logged out by now"
 LATE_sound=Sosumi
@@ -295,14 +296,18 @@ if [[ $matched -eq 0 && $LATE_after != "" ]]; then
   la_start=$((10#$la_h*60 + 10#$la_m))
   repeat=${LATE_repeat:-30}
   if (( NOW >= la_start )); then
-    # send only on intervals matching repeat minutes
+    # Trigger once per repeat bucket within a grace window to tolerate timer jitter.
     delta=$(( NOW - la_start ))
-    if (( delta % repeat == 0 )); then
+    remainder=$(( delta % repeat ))
+    bucket=$(( delta / repeat ))
+    late_marker="/tmp/workday-late-$(date +%Y-%m-%d)-${la_h}${la_m}-$bucket"
+    if (( remainder < LATE_grace_min )) && [[ ! -f $late_marker ]]; then
       status=$(get_status)
       msg=${LATE_message//\{time\}/$(date +%H:%M)}
       msg=${msg//\{status\}/$status}
       resolved_cmd=$(resolve_command_key "$LATE_command" || true)
       platform_notify "$LATE_title" "$msg" "$LATE_sound" "$resolved_cmd"
+      touch "$late_marker"
     fi
   fi
 fi

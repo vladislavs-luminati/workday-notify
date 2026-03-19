@@ -14,6 +14,7 @@ run_at() {
     local config="${2:-$TEST_DIR/fixtures/default.conf}"
     : > "$MOCK_LOG"
     rm -f /tmp/workday-daily-update-20*
+    rm -f /tmp/workday-late-*
 
     # Build a patched script that:
     # 1. Forces NOW to the given value
