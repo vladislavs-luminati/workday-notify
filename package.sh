@@ -68,8 +68,8 @@ ensure_modern_bash() {
         fi
     done
 
-    echo "Warning: Bash >=4 not found; installer may fail on older systems." >&2
-    return 1
+    echo "Warning: Bash >=4 not found; continuing with current Bash." >&2
+    return 0
 }
 
 ensure_modern_bash
