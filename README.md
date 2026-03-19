@@ -1,9 +1,11 @@
 # workday-notify
 
-macOS notification daemon that reminds you to log in, take breaks, and log out
-on time. Click a notification to run a command (e.g. `daily login`).
+Cross-platform notification daemon (macOS + Linux) that reminds you to log in,
+take breaks, and log out on time. Click a notification to run a command (e.g.
+`daily login`).
 
-Runs via `launchd` every 15 minutes. Schedule is defined in a simple config file.
+On macOS it runs via `launchd`; on Linux it installs a `systemd --user`
+service+timer. Schedule is defined in a simple config file.
 
 ## What it looks like
 
