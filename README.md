@@ -53,9 +53,13 @@ Note about Bash: the main script uses Bash features. On Linux the system Bash is
 
 ## Quick Install (one command)
 
+Install directly from the GitHub release asset (recommended):
+
 ```bash
-curl -sL https://raw.githubusercontent.com/vladislavs-luminati/workday-notify/main/setup.sh | bash
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.1.sh | bash
 ```
+
+This downloads the self-extracting installer published on the `v1.0.1` release and runs it.
 
 This downloads and runs the setup script which:
 1. Installs `terminal-notifier` via Homebrew (if missing)
@@ -158,10 +162,11 @@ bash src/workday-notify.sh --test
 
 ## Packaging / one-file installer
 
-Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.0.sh`). To install from a release artifact, copy it to the target host and run:
+Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.1.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.1` release):
 
 ```bash
-bash dist/workday-notify-v1.0.0.sh
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.1.sh -o workday-notify.sh
+bash workday-notify.sh
 ```
 
 ## Linux (systemd user timer)
