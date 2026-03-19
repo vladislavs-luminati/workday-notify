@@ -40,6 +40,8 @@ service+timer. Schedule is defined in a simple config file.
   button like `osascript`)
 - **Click actions** — clicking a notification opens Terminal and runs a command
   (e.g. `daily login`, `daily logout`)
+- **Linux Ubuntu/Debian Apply flow** — on supported Linux desktops, actionable
+  reminders show an `Apply`/`Dismiss` prompt before running commands
 - **Daily status** — break/wrap-up/late notifications automatically append your
   `daily status` total hours
 - **Configurable late reminders** — set when they start and how often they
@@ -50,6 +52,8 @@ service+timer. Schedule is defined in a simple config file.
 
 - macOS or Linux (see notes below)
 - [Homebrew](https://brew.sh) (for auto-installing `terminal-notifier` on macOS)
+
+Linux note: desktop sessions are required. Headless Linux environments are not supported.
 
 Note about Bash: the main script uses Bash features. On Linux the system Bash is suitable; on macOS the bundled Bash may be older. The installer checks for a usable Bash and will advise installing a newer Bash (Homebrew `bash`) if needed.
 

@@ -3,7 +3,60 @@
 # Uses notify-send (libnotify) for notifications, xdg-open for apps,
 # and systemd user timer for the daemon.
 
+linux_distro_id() {
+    if [[ -r /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        echo "${ID:-unknown}"
+        return
+    fi
+    echo "unknown"
+}
+
+can_show_gui() {
+    [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]
+}
+
+ensure_not_headless() {
+    if ! can_show_gui; then
+        echo "Error: headless Linux is not supported. Run install in a desktop session (DISPLAY/WAYLAND required)." >&2
+        return 1
+    fi
+}
+
+run_command_in_terminal() {
+    local cmd="$1"
+    if command -v gnome-terminal &>/dev/null; then
+        gnome-terminal -- bash -l -c "$cmd; exec bash" &
+    elif command -v xterm &>/dev/null; then
+        xterm -e "bash -l -c '$cmd; exec bash'" &
+    fi
+}
+
+prompt_apply_for_command() {
+    local title="$1" msg="$2" cmd="$3"
+    local distro
+    distro="$(linux_distro_id)"
+
+    # Ubuntu/Debian desktop: explicit Apply click before running.
+    if [[ "$distro" == "ubuntu" || "$distro" == "debian" ]]; then
+        if can_show_gui && command -v zenity &>/dev/null; then
+            if zenity --question \
+                --title "${title}" \
+                --text "${msg}" \
+                --ok-label "Apply" \
+                --cancel-label "Dismiss"; then
+                run_command_in_terminal "$cmd"
+            fi
+            return
+        fi
+    fi
+
+    # Headless or unsupported desktop: notify only, never auto-run.
+}
+
 platform_init() {
+    ensure_not_headless || exit 1
     if ! command -v notify-send &>/dev/null; then
         echo "Error: notify-send not found. Install: sudo apt install libnotify-bin" >&2
         exit 1
@@ -18,14 +71,8 @@ platform_notify() {
         local snd="/usr/share/sounds/freedesktop/stereo/message.oga"
         paplay "$snd" 2>/dev/null &
     fi
-    # Run command directly if provided (no click support in notify-send)
-    # User sees notification + command runs in background terminal
     if [[ -n "$cmd" ]]; then
-        if command -v gnome-terminal &>/dev/null; then
-            gnome-terminal -- bash -l -c "$cmd; exec bash" &
-        elif command -v xterm &>/dev/null; then
-            xterm -e "bash -l -c '$cmd; exec bash'" &
-        fi
+        prompt_apply_for_command "$title" "$msg" "$cmd"
     fi
 }
 
@@ -47,6 +94,7 @@ platform_notify_daily_update() {
 }
 
 platform_install_deps() {
+    ensure_not_headless || return 1
     if ! command -v notify-send &>/dev/null; then
         echo "Installing libnotify-bin..."
         if command -v apt &>/dev/null; then
@@ -59,9 +107,21 @@ platform_install_deps() {
         fi
     fi
     echo "  notify-send: $(command -v notify-send)"
+
+    # Optional but recommended for actionable prompts on Ubuntu/Debian.
+    if ! command -v zenity &>/dev/null; then
+        if command -v apt &>/dev/null; then
+            echo "Installing zenity (for Apply/Dismiss prompt support)..."
+            sudo apt install -y zenity
+        fi
+    fi
+    if command -v zenity &>/dev/null; then
+        echo "  zenity: $(command -v zenity)"
+    fi
 }
 
 platform_install_daemon() {
+    ensure_not_headless || return 1
     local script_path="$1"
     local service_dir="$HOME/.config/systemd/user"
     mkdir -p "$service_dir"

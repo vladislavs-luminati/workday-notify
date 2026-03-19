@@ -14,6 +14,7 @@ platform_notify() {
     local args=(-title "$title" -message "$msg" -sound "$sound"
                 -group "workday-notify")
     if [[ -n "$cmd" ]]; then
+        args+=(-actions "Apply")
         args+=(-execute "osascript -e 'tell app \"Terminal\" to activate' -e 'tell app \"Terminal\" to do script \"source ~/.profile; $cmd\"'")
     fi
     "$NOTIFIER" "${args[@]}" &
@@ -26,7 +27,7 @@ platform_notify_daily_update() {
         execute_cmd="$execute_cmd; open -a Slack"
     fi
     "$NOTIFIER" -title "$title" -message "$msg" \
-        -sound "$sound" -group "workday-daily-update" \
+        -sound "$sound" -group "workday-daily-update" -actions "Apply" \
         -execute "$execute_cmd" &
 }
 
