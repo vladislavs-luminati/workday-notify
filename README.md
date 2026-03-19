@@ -18,18 +18,18 @@ service+timer. Schedule is defined in a simple config file.
 
 ┌─────────────────────────────────────────────┐
 │ 🔔  Break time                              │
-│ 10:30 — stand up, stretch. (Total: 2h 14m) │
+│ 10:30 — stand up, stretch. (Total: 2h 14m)  │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ 🔔  Log out!                                │
-│ 18:00 — work day is over. (Total: 8h 42m)  │
+│ 18:00 — work day is over. (Total: 8h 42m)   │
 │                                   [Click → daily logout]
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ 🔔  ⚠️ Working late!                        │
-│ It's 19:30. Log out! (Total: 10h 3m)       │
+│ It's 19:30. Log out! (Total: 10h 3m)        │
 │                                   [Click → daily logout]
 └─────────────────────────────────────────────┘
 ```
