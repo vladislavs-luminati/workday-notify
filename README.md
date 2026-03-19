@@ -58,10 +58,10 @@ Note about Bash: the main script uses Bash features. On Linux the system Bash is
 Install directly from the GitHub release asset (recommended):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.2.sh | bash
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.3.sh | bash
 ```
 
-This downloads the self-extracting installer published on the `v1.0.2` release and runs it.
+This downloads the self-extracting installer published on the `v1.0.3` release and runs it.
 
 This downloads and runs the setup script which:
 1. Installs `terminal-notifier` via Homebrew (if missing)
@@ -208,10 +208,10 @@ git config core.hooksPath .githooks
 
 ## Packaging / one-file installer
 
-Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.2.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.2` release):
+Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.3.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.3` release):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.2.sh -o workday-notify.sh
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.3.sh -o workday-notify.sh
 bash workday-notify.sh
 ```
 
