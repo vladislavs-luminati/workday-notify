@@ -208,6 +208,9 @@ You can send a single test notification (no daemon) with:
 bash src/workday-notify.sh --test
 ```
 
+The test notification is actionable and runs the command configured as
+`[commands].test` (default: `whoami`).
+
 ## Git pre-commit hook
 
 This repo includes a pre-commit hook in `.githooks/pre-commit` that runs:

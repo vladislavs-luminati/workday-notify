@@ -27,19 +27,14 @@ Usage: $0 [--test|-t]
 EOF
 }
 
+TEST_MODE=false
+
 if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
   usage; exit 0
 fi
 
 if [[ ${1:-} == "--test" || ${1:-} == "-t" ]]; then
-  platform_notify "Workday Notify - Test" "This is a test notification." "default" ""
-  exit 0
-fi
-
-if [[ ! -f "$CONFIG" ]]; then
-  platform_notify "Workday Notify" "config.conf not found: $CONFIG" "Sosumi" ""
-  echo "Missing config: $CONFIG" >&2
-  exit 1
+  TEST_MODE=true
 fi
 
 HOUR=$(date +%H)
@@ -68,6 +63,7 @@ LUNCH_login_message="Back from lunch"
 LOGIN_COMMAND="daily login"
 LOGOUT_COMMAND="daily logout"
 STATUS_COMMAND="daily status"
+TEST_COMMAND="whoami"
 
 resolve_command_key() {
   local key="$1"
@@ -103,95 +99,107 @@ fi
 SCHEDULE=()
 
 current_section=""
-while IFS= read -r raw; do
-  line=${raw%%#*}
-  line=${line%%$'\r'}
-  line=${line## } ; line=${line%% }
-  [[ -z $line ]] && continue
-  if [[ $line =~ ^\[.*\]$ ]]; then
-    current_section=${line#[}; current_section=${current_section%]}
-    continue
-  fi
+if [[ -f "$CONFIG" ]]; then
+  while IFS= read -r raw; do
+    line=${raw%%#*}
+    line=${line%%$'\r'}
+    line=${line## } ; line=${line%% }
+    [[ -z $line ]] && continue
+    if [[ $line =~ ^\[.*\]$ ]]; then
+      current_section=${line#[}; current_section=${current_section%]}
+      continue
+    fi
 
-  case "$current_section" in
-    schedule)
-      # Expect: TIME | WINDOW | TITLE | MESSAGE | SOUND? | COMMAND_KEY?
-      if [[ $line == *":"* ]]; then
-        IFS='|' read -r time window title message sound cmd <<< "$line"
-        # trim
-        time=${time## } ; time=${time%% }
-        window=${window## } ; window=${window%% }
-        title=${title## } ; title=${title%% }
-        message=${message## } ; message=${message%% }
-        sound=${sound## } ; sound=${sound%% }
-        cmd=${cmd## } ; cmd=${cmd%% }
-        SCHEDULE+=("$time|$window|$title|$message|$sound|$cmd")
-      fi
-      ;;
-    late)
-      if [[ $line == *=* ]]; then
-        key=${line%%=*}; val=${line#*=}
-        key=${key// /}; val=${val## }; val=${val%% }
-        # strip surrounding double quotes
-        val=${val#\"}; val=${val%\"}
-        case "$key" in
-          after) LATE_after=$val ;;
-          repeat) LATE_repeat=$val ;;
-          title) LATE_title=$val ;;
-          message) LATE_message=$val ;;
-          sound) LATE_sound=$val ;;
-          command) LATE_command=$val ;;
-        esac
-      fi
-      ;;
-    daily_update)
-      if [[ $line == *=* ]]; then
-        key=${line%%=*}; val=${line#*=}
-        key=${key// /}; val=${val## }; val=${val%% }
-        val=${val#\"}; val=${val%\"}
-        case "$key" in
-          enabled) DU_enabled=$val ;;
-          after) DU_after=$val ;;
-          title) DU_title=$val ;;
-          message) DU_message=$val ;;
-          sound) DU_sound=$val ;;
-          slack) DU_slack=$val ;;
-        esac
-      fi
-      ;;
-    lunch)
-      if [[ $line == *=* ]]; then
-        key=${line%%=*}; val=${line#*=}
-        key=${key// /}; val=${val## }; val=${val%% }
-        val=${val#\"}; val=${val%\"}
-        case "$key" in
-          enabled) LUNCH_enabled=$val ;;
-          start) LUNCH_start=$val ;;
-          end) LUNCH_end=$val ;;
-          logout_enabled) LUNCH_logout_enabled=$val ;;
-          login_enabled) LUNCH_login_enabled=$val ;;
-          sound) LUNCH_sound=$val ;;
-          logout_title) LUNCH_logout_title=$val ;;
-          logout_message) LUNCH_logout_message=$val ;;
-          login_title) LUNCH_login_title=$val ;;
-          login_message) LUNCH_login_message=$val ;;
-        esac
-      fi
-      ;;
-    commands)
-      if [[ $line == *=* ]]; then
-        key=${line%%=*}; val=${line#*=}
-        key=${key// /}; val=${val## }; val=${val%% }
-        val=${val#\"}; val=${val%\"}
-        case "$key" in
-          login) LOGIN_COMMAND=$val ;;
-          logout) LOGOUT_COMMAND=$val ;;
-          status|status_command) STATUS_COMMAND=$val ;;
-        esac
-      fi
-      ;;
-  esac
-done < "$CONFIG"
+    case "$current_section" in
+      schedule)
+        # Expect: TIME | WINDOW | TITLE | MESSAGE | SOUND? | COMMAND_KEY?
+        if [[ $line == *":"* ]]; then
+          IFS='|' read -r time window title message sound cmd <<< "$line"
+          # trim
+          time=${time## } ; time=${time%% }
+          window=${window## } ; window=${window%% }
+          title=${title## } ; title=${title%% }
+          message=${message## } ; message=${message%% }
+          sound=${sound## } ; sound=${sound%% }
+          cmd=${cmd## } ; cmd=${cmd%% }
+          SCHEDULE+=("$time|$window|$title|$message|$sound|$cmd")
+        fi
+        ;;
+      late)
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          # strip surrounding double quotes
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            after) LATE_after=$val ;;
+            repeat) LATE_repeat=$val ;;
+            title) LATE_title=$val ;;
+            message) LATE_message=$val ;;
+            sound) LATE_sound=$val ;;
+            command) LATE_command=$val ;;
+          esac
+        fi
+        ;;
+      daily_update)
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            enabled) DU_enabled=$val ;;
+            after) DU_after=$val ;;
+            title) DU_title=$val ;;
+            message) DU_message=$val ;;
+            sound) DU_sound=$val ;;
+            slack) DU_slack=$val ;;
+          esac
+        fi
+        ;;
+      lunch)
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            enabled) LUNCH_enabled=$val ;;
+            start) LUNCH_start=$val ;;
+            end) LUNCH_end=$val ;;
+            logout_enabled) LUNCH_logout_enabled=$val ;;
+            login_enabled) LUNCH_login_enabled=$val ;;
+            sound) LUNCH_sound=$val ;;
+            logout_title) LUNCH_logout_title=$val ;;
+            logout_message) LUNCH_logout_message=$val ;;
+            login_title) LUNCH_login_title=$val ;;
+            login_message) LUNCH_login_message=$val ;;
+          esac
+        fi
+        ;;
+      commands)
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            login) LOGIN_COMMAND=$val ;;
+            logout) LOGOUT_COMMAND=$val ;;
+            status|status_command) STATUS_COMMAND=$val ;;
+            test) TEST_COMMAND=$val ;;
+          esac
+        fi
+        ;;
+    esac
+  done < "$CONFIG"
+elif [[ $TEST_MODE != true ]]; then
+  platform_notify "Workday Notify" "config.conf not found: $CONFIG" "Sosumi" ""
+  echo "Missing config: $CONFIG" >&2
+  exit 1
+fi
+
+if [[ $TEST_MODE == true ]]; then
+  platform_notify "Workday Notify - Test" "This is a test notification." "default" "$TEST_COMMAND"
+  exit 0
+fi
 
 matched=0
 
