@@ -62,10 +62,10 @@ Note about Bash: the main script uses Bash features. On Linux the system Bash is
 Install directly from the GitHub release asset (recommended):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.5.sh | bash
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.9.sh | bash
 ```
 
-This downloads the self-extracting installer published on the `v1.0.5` release and runs it.
+This downloads the self-extracting installer published on the `v1.0.9` release and runs it.
 
 This downloads and runs the setup script which:
 1. Installs `terminal-notifier` via Homebrew (if missing)
@@ -103,6 +103,8 @@ bash uninstall.sh
 Edit `config.conf` to change the schedule:
 
 ```
+working_days = Mon-Fri
+
 [schedule]
 # HH:MM | window_min | title | message | sound | command_key
 08:00 | 75  | Good morning!  | Time to log in and start your day. | | login
@@ -124,6 +126,8 @@ login = daily login
 logout = daily logout
 status = daily status
 ```
+
+`working_days` controls which days reminders run. Examples: `Mon-Fri` (default), `Mon-Sun`, `Mon,Wed,Fri`.
 
 ### Schedule fields
 
@@ -232,12 +236,14 @@ git config core.hooksPath .githooks
 
 ## Packaging / one-file installer
 
-Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.5.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.5` release):
+Release artifacts are produced into `dist/` as a self-extracting installer (e.g. `dist/workday-notify-v1.0.9.sh`). To install from a release artifact, you can either download the asset from GitHub or run the bundled installer directly. Example (download from the `v1.0.9` release):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.5.sh -o workday-notify.sh
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.9.sh -o workday-notify.sh
 bash workday-notify.sh
 ```
+
+Release process note: always publish GitHub releases with explicit release notes (for example via `gh release create ... --notes "..."`).
 
 ## Linux (systemd user timer)
 

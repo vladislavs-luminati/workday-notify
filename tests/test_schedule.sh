@@ -48,6 +48,25 @@ assert_log_not_contains "NOTIFY" "06:40 sends no schedule notification"
 run_at 600  # 10:00 — between windows
 assert_log_not_contains "NOTIFY" "10:00 sends no schedule notification"
 
+# Working days gate: use a day that is not today to ensure reminders skip.
+today=$(date +%a)
+case "$today" in
+    Mon) other_day="Tue" ;;
+    Tue) other_day="Wed" ;;
+    Wed) other_day="Thu" ;;
+    Thu) other_day="Fri" ;;
+    Fri) other_day="Sat" ;;
+    Sat) other_day="Sun" ;;
+    Sun) other_day="Mon" ;;
+esac
+wd_cfg="/tmp/workday-notify-wd-$$.conf"
+cp "$TEST_DIR/fixtures/default.conf" "$wd_cfg"
+sed -i.bak "s/^working_days[[:space:]]*=.*/working_days = ${other_day}/" "$wd_cfg"
+rm -f "${wd_cfg}.bak"
+run_at 500 "$wd_cfg"
+assert_log_not_contains "NOTIFY" "non-working day skips reminders"
+rm -f "$wd_cfg"
+
 echo ""
 
 # ─── Login entry skips daily status ────────────────────────────

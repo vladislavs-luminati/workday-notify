@@ -31,6 +31,57 @@ TEST_MODE=false
 TEST_ACTION_OVERRIDE=""
 TEST_MESSAGE="This is a test notification."
 
+normalize_day() {
+  local d
+  d=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  case "$d" in
+    mon* ) echo "Mon" ;;
+    tue* ) echo "Tue" ;;
+    wed* ) echo "Wed" ;;
+    thu* ) echo "Thu" ;;
+    fri* ) echo "Fri" ;;
+    sat* ) echo "Sat" ;;
+    sun* ) echo "Sun" ;;
+    * ) echo "" ;;
+  esac
+}
+
+is_day_allowed() {
+  local spec="$1" today="$2"
+  local days=(Mon Tue Wed Thu Fri Sat Sun)
+  local token part start end idx sidx eidx
+
+  for token in ${spec//,/ }; do
+    part=${token// /}
+    [[ -z "$part" ]] && continue
+    if [[ "$part" == *-* ]]; then
+      start=$(normalize_day "${part%-*}")
+      end=$(normalize_day "${part#*-}")
+      [[ -z "$start" || -z "$end" ]] && continue
+      sidx=-1; eidx=-1; idx=0
+      for d in "${days[@]}"; do
+        [[ "$d" == "$start" ]] && sidx=$idx
+        [[ "$d" == "$end" ]] && eidx=$idx
+        idx=$((idx+1))
+      done
+      [[ $sidx -lt 0 || $eidx -lt 0 ]] && continue
+      idx=0
+      for d in "${days[@]}"; do
+        if (( sidx <= eidx )); then
+          (( idx >= sidx && idx <= eidx )) && [[ "$d" == "$today" ]] && return 0
+        else
+          (( idx >= sidx || idx <= eidx )) && [[ "$d" == "$today" ]] && return 0
+        fi
+        idx=$((idx+1))
+      done
+    else
+      [[ "$(normalize_day "$part")" == "$today" ]] && return 0
+    fi
+  done
+
+  return 1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h)
@@ -93,6 +144,7 @@ LOGIN_COMMAND="daily login"
 LOGOUT_COMMAND="daily logout"
 STATUS_COMMAND="daily status"
 TEST_COMMAND="whoami"
+WORKING_DAYS="Mon-Fri"
 
 resolve_command_key() {
   local key="$1"
@@ -218,6 +270,16 @@ if [[ -f "$CONFIG" ]]; then
           esac
         fi
         ;;
+      "")
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            working_days) WORKING_DAYS=$val ;;
+          esac
+        fi
+        ;;
     esac
   done < "$CONFIG"
 elif [[ $TEST_MODE != true ]]; then
@@ -231,6 +293,11 @@ if [[ $TEST_MODE == true ]]; then
     TEST_COMMAND="$TEST_ACTION_OVERRIDE"
   fi
   platform_notify "Workday Notify - Test" "$TEST_MESSAGE" "default" "$TEST_COMMAND"
+  exit 0
+fi
+
+TODAY=$(date +%a)
+if ! is_day_allowed "$WORKING_DAYS" "$TODAY"; then
   exit 0
 fi
 
