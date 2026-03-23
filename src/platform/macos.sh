@@ -17,7 +17,8 @@ on run argv
 end run
 APPLESCRIPT
 )
-    [[ "$result" == "Apply" ]]
+    result=$(echo "$result" | tr -d '\r' | sed 's/^ *//;s/ *$//')
+    [[ "$result" == "Apply" || "$result" == "button returned:Apply" ]]
 }
 
 run_terminal_action() {
@@ -46,8 +47,14 @@ platform_notify() {
 
 platform_notify_daily_update() {
     local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}"
+    local accepted=false
     if prompt_apply_dialog "$title" "$msg"; then
-        touch "$marker"
+        accepted=true
+    fi
+    # Mark as handled once shown so the user doesn't get repeated daily prompts
+    # when button-return parsing is flaky across macOS/AppleScript environments.
+    touch "$marker"
+    if [[ "$accepted" == true ]]; then
         if [[ "$open_slack" == "true" ]]; then
             open -a Slack
         fi

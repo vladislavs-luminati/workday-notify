@@ -76,6 +76,16 @@ echo "Login skips status:"
 run_at 500  # 08:20
 assert_log_not_contains "Total:" "Good morning does NOT include daily status"
 
+# Backward compatibility: schedule command can be a literal shell command
+cmd_cfg="/tmp/workday-notify-cmd-$$.conf"
+cp "$TEST_DIR/fixtures/default.conf" "$cmd_cfg"
+sed -i.bak 's@^08:00 .*@08:00 | 75  | Good morning!       | Time to log in and start your day. | | echo legacy-login@' "$cmd_cfg"
+rm -f "${cmd_cfg}.bak"
+run_at 500 "$cmd_cfg"
+assert_log_contains "NOTIFY|Good morning!" "literal command schedule entry still notifies"
+assert_log_contains "echo legacy-login" "literal command in schedule is supported"
+rm -f "$cmd_cfg"
+
 echo ""
 
 # ─── Late section ──────────────────────────────────────────────

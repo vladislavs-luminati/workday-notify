@@ -160,6 +160,24 @@ resolve_command_key() {
   esac
 }
 
+resolve_notification_command() {
+  local raw="$1"
+  raw=${raw## }
+  raw=${raw%% }
+  [[ -z "$raw" ]] && { echo ""; return 0; }
+
+  # Backward compatibility: allow either command keys (login/logout/status)
+  # or full shell commands in config.
+  case "$raw" in
+    login|logout|status)
+      resolve_command_key "$raw"
+      ;;
+    *)
+      echo "$raw"
+      ;;
+  esac
+}
+
 LATE_after=""
 LATE_repeat=30
 LATE_grace_min=10
@@ -321,7 +339,7 @@ for entry in "${SCHEDULE[@]:-}"; do
         msg="$msg ($status)"
       fi
     fi
-    resolved_cmd=$(resolve_command_key "$cmd_trimmed" || true)
+    resolved_cmd=$(resolve_notification_command "$cmd_trimmed" || true)
     platform_notify "$title" "$msg" "$sound" "$resolved_cmd"
     matched=1
     break
@@ -372,7 +390,7 @@ if [[ $matched -eq 0 && $LATE_after != "" ]]; then
       status=$(get_status)
       msg=${LATE_message//\{time\}/$(date +%H:%M)}
       msg=${msg//\{status\}/$status}
-      resolved_cmd=$(resolve_command_key "$LATE_command" || true)
+      resolved_cmd=$(resolve_notification_command "$LATE_command" || true)
       platform_notify "$LATE_title" "$msg" "$LATE_sound" "$resolved_cmd"
       touch "$late_marker"
     fi
