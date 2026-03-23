@@ -163,6 +163,7 @@ Changes take effect on the next 15-min cycle — no reload needed.
 | `message` | Notification body |
 | `sound` | Notification sound |
 | `slack` | Open Slack on daily update (`true`/`false`). Defaults to `true` on macOS and `false` on Linux. |
+| `slack_target` | Optional Slack URL/deep link to open on accept (for example a channel URL or `slack://channel?...`). If empty, opens Slack app home. |
 
 ### Example prompts to update config
 

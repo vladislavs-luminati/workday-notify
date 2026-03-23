@@ -46,7 +46,7 @@ platform_notify() {
 }
 
 platform_notify_daily_update() {
-    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}"
+    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}" slack_target="$6"
     local accepted=false
     if prompt_apply_dialog "$title" "$msg"; then
         accepted=true
@@ -56,7 +56,11 @@ platform_notify_daily_update() {
     touch "$marker"
     if [[ "$accepted" == true ]]; then
         if [[ "$open_slack" == "true" ]]; then
-            open -a Slack
+            if [[ -n "$slack_target" ]]; then
+                open "$slack_target"
+            else
+                open -a Slack
+            fi
         fi
     fi
 }

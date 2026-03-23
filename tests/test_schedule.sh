@@ -132,6 +132,7 @@ echo "Daily update:"
 run_at 560  # 09:20 — after 09:15
 assert_log_contains "DAILY_UPDATE|Daily update" "09:20 triggers daily update"
 assert_file_exists "/tmp/workday-daily-update-$(date +%Y-%m-%d)" "marker file created"
+assert_log_contains "DAILY_UPDATE|Daily update|Send your daily status update in Slack|Hero|/tmp/workday-daily-update-$(date +%Y-%m-%d)|true|slack://channel?team=T111&id=C222" "daily update passes slack_target"
 
 # With marker present, should NOT fire again
 # Don't call run_at (it clears markers); run directly with marker in place
@@ -166,8 +167,7 @@ echo "Daily update Slack setting:"
 
 rm -f /tmp/workday-daily-update-*
 run_at 560 "$TEST_DIR/fixtures/daily_update_no_slack.conf"
-assert_log_contains "DAILY_UPDATE|Daily update|Send update|Hero|/tmp/workday-daily-update-$(date +%Y-%m-%d)|false" "daily update honors slack=false"
-
+assert_log_contains "DAILY_UPDATE|Daily update|Send update|Hero|/tmp/workday-daily-update-$(date +%Y-%m-%d)|false|" "daily update honors slack=false"
 echo ""
 
 # ─── Daily update before start time ───────────────────────────

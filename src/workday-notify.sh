@@ -192,6 +192,7 @@ DU_title="Daily update"
 DU_message="Send your daily status update"
 DU_sound=Hero
 DU_slack=false
+DU_slack_target=""
 if [[ $IS_MACOS == true ]]; then
   DU_slack=true
 fi
@@ -253,6 +254,7 @@ if [[ -f "$CONFIG" ]]; then
             message) DU_message=$val ;;
             sound) DU_sound=$val ;;
             slack) DU_slack=$val ;;
+            slack_target|slack_channel) DU_slack_target=$val ;;
           esac
         fi
         ;;
@@ -370,7 +372,7 @@ if [[ $matched -eq 0 && $DU_enabled == true && $DU_after != "" ]]; then
   marker="/tmp/workday-daily-update-$(date +%Y-%m-%d)"
   # Only prompt for daily update before 18:00 (1080 minutes)
   if (( NOW >= du_start && NOW < 1080 )) && [[ ! -f $marker ]]; then
-    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker" "$DU_slack"
+    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker" "$DU_slack" "$DU_slack_target"
     matched=1
   fi
 fi
