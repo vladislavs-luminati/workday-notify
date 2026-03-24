@@ -23,7 +23,9 @@ APPLESCRIPT
 
 run_terminal_action() {
     local cmd="$1"
-    osascript -e 'tell app "Terminal" to activate' -e "tell app \"Terminal\" to do script \"source ~/.profile; $cmd\"" &
+    # Execute in a shell directly; this avoids AppleScript parsing issues with
+    # Terminal "do script" on some macOS setups.
+    bash -lc "source ~/.profile >/dev/null 2>&1; source ~/.bash_profile >/dev/null 2>&1; source ~/.zprofile >/dev/null 2>&1; source ~/.zshrc >/dev/null 2>&1; $cmd" >>/tmp/workday-notify-action.log 2>&1 &
 }
 
 platform_init() {
@@ -46,7 +48,7 @@ platform_notify() {
 }
 
 platform_notify_daily_update() {
-    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}" slack_target="$6"
+    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-true}" slack_target="$6" marker_persist="$7"
     local accepted=false
     if prompt_apply_dialog "$title" "$msg"; then
         accepted=true
@@ -54,6 +56,9 @@ platform_notify_daily_update() {
     # Mark as handled once shown so the user doesn't get repeated daily prompts
     # when button-return parsing is flaky across macOS/AppleScript environments.
     touch "$marker"
+    if [[ -n "$marker_persist" ]]; then
+        touch "$marker_persist"
+    fi
     if [[ "$accepted" == true ]]; then
         if [[ "$open_slack" == "true" ]]; then
             if [[ -n "$slack_target" ]]; then

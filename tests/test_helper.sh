@@ -6,6 +6,8 @@
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$TEST_DIR/../src"
 MOCK_LOG="/tmp/workday-notify-mock.log"
+STATE_DIR="/tmp/workday-notify-state-$$"
+export WORKDAY_STATE_DIR="$STATE_DIR"
 PASS=0; FAIL=0
 
 # Override platform detection to use mocks
@@ -15,6 +17,8 @@ run_at() {
     : > "$MOCK_LOG"
     rm -f /tmp/workday-daily-update-20*
     rm -f /tmp/workday-late-*
+    mkdir -p "$WORKDAY_STATE_DIR"
+    rm -f "$WORKDAY_STATE_DIR"/workday-daily-update-* "$WORKDAY_STATE_DIR"/workday-late-* 2>/dev/null || true
 
     # Build a patched script that:
     # 1. Forces NOW to the given value
@@ -28,7 +32,7 @@ run_at() {
     awk '/^get_status\(\)/{found=1} found && /^}/{print "get_status() { echo \"Total: 4h 30m\"; }"; found=0; next} !found' \
         > "$tmp"
 
-    WORKDAY_CONFIG="$config" bash "$tmp" 2>/dev/null
+    WORKDAY_CONFIG="$config" WORKDAY_STATE_DIR="$WORKDAY_STATE_DIR" bash "$tmp" 2>/dev/null
     # Wait for background processes
     sleep 1
     rm -f "$tmp"

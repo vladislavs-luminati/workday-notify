@@ -77,13 +77,16 @@ platform_notify() {
 }
 
 platform_notify_daily_update() {
-    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-false}" slack_target="$6"
+    local title="$1" msg="$2" sound="${3:-default}" marker="$4" open_slack="${5:-false}" slack_target="$6" marker_persist="$7"
     notify-send -a "Workday Notify" "$title" "$msg" -u normal
     if command -v paplay &>/dev/null; then
         paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null &
     fi
     # On Linux, mark done immediately (no click callback). Opening Slack is optional.
     touch "$marker"
+    if [[ -n "$marker_persist" ]]; then
+        touch "$marker_persist"
+    fi
     if [[ "$open_slack" == "true" ]]; then
         if [[ -n "$slack_target" ]] && command -v xdg-open &>/dev/null; then
             xdg-open "$slack_target" &>/dev/null &

@@ -370,9 +370,12 @@ if [[ $matched -eq 0 && $DU_enabled == true && $DU_after != "" ]]; then
   du_h=${DU_after%%:*}; du_m=${DU_after##*:}
   du_start=$((10#$du_h*60 + 10#$du_m))
   marker="/tmp/workday-daily-update-$(date +%Y-%m-%d)"
+  marker_state_dir="${WORKDAY_STATE_DIR:-$HOME/.workday-notify/state}"
+  marker_persist="${marker_state_dir}/workday-daily-update-$(date +%Y-%m-%d)"
+  mkdir -p "$marker_state_dir" 2>/dev/null || true
   # Only prompt for daily update before 18:00 (1080 minutes)
-  if (( NOW >= du_start && NOW < 1080 )) && [[ ! -f $marker ]]; then
-    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker" "$DU_slack" "$DU_slack_target"
+  if (( NOW >= du_start && NOW < 1080 )) && [[ ! -f $marker && ! -f $marker_persist ]]; then
+    platform_notify_daily_update "$DU_title" "$DU_message" "$DU_sound" "$marker" "$DU_slack" "$DU_slack_target" "$marker_persist"
     matched=1
   fi
 fi
