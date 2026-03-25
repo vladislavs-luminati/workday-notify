@@ -140,7 +140,9 @@ get_status() {
 }
 
 get_status_raw() {
-  bash -l -c "$STATUS_COMMAND 2>/dev/null" 2>/dev/null
+  local status_cmd
+  status_cmd=$(build_action_command "$STATUS_COMMAND")
+  bash -l -c "$status_cmd 2>/dev/null" 2>/dev/null
 }
 
 DAILY_STATE=""
@@ -172,6 +174,19 @@ infer_daily_state_from_status() {
   fi
 }
 
+read_local_action_state() {
+  local state_dir marker state
+  state_dir="${WORKDAY_STATE_DIR:-$HOME/.workday-notify/state}"
+  marker="$state_dir/last_action_state"
+  [[ -f "$marker" ]] || { echo "UNKNOWN"; return; }
+  state=$(awk '{print $1}' "$marker" 2>/dev/null)
+  if [[ "$state" == "IN" || "$state" == "OUT" ]]; then
+    echo "$state"
+  else
+    echo "UNKNOWN"
+  fi
+}
+
 current_daily_state() {
   if [[ "${WORKDAY_DISABLE_STATE_INFERENCE:-}" == "1" ]]; then
     echo "UNKNOWN"
@@ -179,6 +194,9 @@ current_daily_state() {
   fi
   if [[ -z "$DAILY_STATE" ]]; then
     DAILY_STATE=$(infer_daily_state_from_status "$(get_status_raw)")
+    if [[ "$DAILY_STATE" == "UNKNOWN" ]]; then
+      DAILY_STATE=$(read_local_action_state)
+    fi
   fi
   echo "$DAILY_STATE"
 }

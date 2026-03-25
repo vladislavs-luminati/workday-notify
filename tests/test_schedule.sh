@@ -180,6 +180,34 @@ assert_log_not_contains "DAILY_UPDATE" "09:00 does not trigger daily update (bef
 
 echo ""
 
+# ─── State fallback suppression ───────────────────────────────
+
+echo "State fallback suppression:"
+
+> "$MOCK_LOG"
+fallback_cfg="/tmp/workday-notify-fallback-$$.conf"
+cp "$TEST_DIR/fixtures/default.conf" "$fallback_cfg"
+sed -i.bak 's/^status[[:space:]]*=.*/status = false/' "$fallback_cfg"
+rm -f "${fallback_cfg}.bak"
+
+fallback_state_dir="/tmp/workday-notify-fallback-state-$$"
+mkdir -p "$fallback_state_dir"
+echo "OUT $(date +%s)" > "$fallback_state_dir/last_action_state"
+
+fallback_tmp="/tmp/workday-notify-test-fallback-$$.sh"
+sed \
+    -e "s|^NOW=\$((.*))$|NOW=1080|" \
+    -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
+    "$SRC_DIR/workday-notify.sh" > "$fallback_tmp"
+
+WORKDAY_CONFIG="$fallback_cfg" WORKDAY_STATE_DIR="$fallback_state_dir" WORKDAY_DISABLE_STATE_INFERENCE=0 bash "$fallback_tmp" 2>/dev/null
+sleep 0.5
+rm -f "$fallback_tmp" "$fallback_cfg"
+rm -rf "$fallback_state_dir"
+assert_log_not_contains "NOTIFY|⚠️ Working late!" "local OUT fallback suppresses late reminder when status fails"
+
+echo ""
+
 # ─── Config missing ──────────────────────────────────────────
 
 echo "Error handling:"

@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.0.14 - 2026-03-25
+
+### Fixed
+- Prevented repeated logout/late reminders after successful logout when remote status lookup is flaky.
+- `current_daily_state` now falls back to a local action-state marker when `daily status` cannot be inferred.
+
+### Changed
+- macOS action runner now persists local state markers on successful actions:
+  - `IN` after login
+  - `OUT` after logout
+- Added stronger post-action confirmation diagnostics in action logs.
+- Added short alert-dialog fallback confirmation for action result visibility.
+
 ## v1.0.13 - 2026-03-25
 
 ### Fixed

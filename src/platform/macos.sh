@@ -44,16 +44,47 @@ run_terminal_action() {
             rc=$?
         fi
 
-        if [[ -n "$action" && -n "$NOTIFIER_PATH" && -x "$NOTIFIER_PATH" ]]; then
+        if [[ $rc -eq 0 ]]; then
+            state_dir="${WORKDAY_STATE_DIR:-$HOME/.workday-notify/state}"
+            mkdir -p "$state_dir" >/dev/null 2>&1 || true
+            if [[ "$action" == "login" ]]; then
+                echo "IN $(date +%s)" > "$state_dir/last_action_state"
+            elif [[ "$action" == "logout" ]]; then
+                echo "OUT $(date +%s)" > "$state_dir/last_action_state"
+            fi
+        fi
+
+        if [[ -n "$action" ]]; then
+            ts=$(date "+%Y-%m-%d %H:%M:%S")
+            echo "[$ts] action=$action rc=$rc cmd=$CMD"
+
+            notify_title="Workday Notify"
             if [[ $rc -eq 0 ]]; then
                 if [[ "$action" == "login" ]]; then
-                    "$NOTIFIER_PATH" -title "Workday Notify" -message "You are now logged in. Have a pleasant and productive day." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+                    notify_msg="You are now logged in. Have a pleasant and productive day."
                 else
-                    "$NOTIFIER_PATH" -title "Workday Notify" -message "You are now logged out. Great work today." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+                    notify_msg="You are now logged out. Great work today."
                 fi
             else
-                "$NOTIFIER_PATH" -title "Workday Notify" -message "Failed to run $action command. Check /tmp/workday-notify-action.log." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+                notify_msg="Failed to run $action command. Check /tmp/workday-notify-action.log."
             fi
+
+            notify_rc=0
+            if [[ -n "$NOTIFIER_PATH" && -x "$NOTIFIER_PATH" ]]; then
+                "$NOTIFIER_PATH" -title "$notify_title" -message "$notify_msg" -sound default -group workday-notify-action >/dev/null 2>&1
+                notify_rc=$?
+            else
+                osascript -e "display notification \"$notify_msg\" with title \"$notify_title\"" >/dev/null 2>&1
+                notify_rc=$?
+            fi
+            echo "[$ts] followup_notification_rc=$notify_rc msg=$notify_msg"
+
+            dialog_rc=0
+            if [[ "${WORKDAY_CONFIRM_DIALOG:-1}" == "1" ]]; then
+                osascript -e "display alert \"$notify_title\" message \"$notify_msg\" giving up after 3" >/dev/null 2>&1
+                dialog_rc=$?
+            fi
+            echo "[$ts] followup_dialog_rc=$dialog_rc"
         fi
     ' >>/tmp/workday-notify-action.log 2>&1 &
 }
