@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.0.13 - 2026-03-25
+
+### Fixed
+- Corrected schedule message text to match actual reminder trigger times in default config:
+  - `Wrapping up` at `16:00` now says `16:00` (was `17:00`).
+  - `Log out!` at `17:00` now says `17:00` (was `18:00`).
+
 ## v1.0.12 - 2026-03-25
 
 ### Added
