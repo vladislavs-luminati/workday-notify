@@ -8,6 +8,7 @@ SRC_DIR="$TEST_DIR/../src"
 MOCK_LOG="/tmp/workday-notify-mock.log"
 STATE_DIR="/tmp/workday-notify-state-$$"
 export WORKDAY_STATE_DIR="$STATE_DIR"
+export WORKDAY_DISABLE_STATE_INFERENCE=1
 PASS=0; FAIL=0
 
 # Override platform detection to use mocks

@@ -207,7 +207,7 @@ sed -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"
 WORKDAY_CONFIG="$TEST_DIR/fixtures/default.conf" bash "$cli_tmp" --test --action "echo hi" --message "Custom test message" 2>/dev/null
 sleep 0.5
 rm -f "$cli_tmp"
-assert_log_contains "NOTIFY|Workday Notify - Test|Custom test message|default|echo hi" "--test uses --action and --message"
+assert_log_contains "NOTIFY|Workday Notify - Test|Custom test message|default|true; echo hi" "--test uses --action and --message"
 
 echo ""
 

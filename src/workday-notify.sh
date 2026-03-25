@@ -123,8 +123,74 @@ MIN=$(date +%M)
 NOW=$((10#$HOUR * 60 + 10#$MIN))
 
 get_status() {
-  # run configured status command in a login shell and extract a compact summary
-  bash -l -c "$STATUS_COMMAND 2>/dev/null" 2>/dev/null | sed -n '1,3p' | tr '\n' ' ' | sed 's/^ *//;s/ *$//'
+  local raw total state first
+  raw=$(get_status_raw)
+  total=$(echo "$raw" | sed -n 's/^[[:space:]]*Total:[[:space:]]*/Total: /p' | head -n1)
+  state=$(current_daily_state)
+  if [[ -n "$total" ]]; then
+    if [[ "$state" == "IN" || "$state" == "OUT" ]]; then
+      echo "$total, State: $state"
+    else
+      echo "$total"
+    fi
+    return 0
+  fi
+  first=$(echo "$raw" | sed '/NOTICE:/d;/^$/d' | head -n1)
+  echo "$first"
+}
+
+get_status_raw() {
+  bash -l -c "$STATUS_COMMAND 2>/dev/null" 2>/dev/null
+}
+
+DAILY_STATE=""
+
+infer_daily_state_from_status() {
+  local raw="$1" last
+  echo "$raw" | grep -qi 'already logged out' && { echo "OUT"; return; }
+  last=$(echo "$raw" | awk '
+    BEGIN{hist=0}
+    /^History:/{hist=1; next}
+    hist==1 {
+      if ($0 ~ /^[[:space:]]*$/) next
+      n=split($0, a, /[[:space:]]+/)
+      for (i=n; i>=1; i--) {
+        if (a[i] != "") {
+          if (a[i] == "IN" || a[i] == "OUT") {
+            print a[i]
+            exit
+          }
+          break
+        }
+      }
+    }
+  ')
+  if [[ "$last" == "IN" || "$last" == "OUT" ]]; then
+    echo "$last"
+  else
+    echo "UNKNOWN"
+  fi
+}
+
+current_daily_state() {
+  if [[ "${WORKDAY_DISABLE_STATE_INFERENCE:-}" == "1" ]]; then
+    echo "UNKNOWN"
+    return
+  fi
+  if [[ -z "$DAILY_STATE" ]]; then
+    DAILY_STATE=$(infer_daily_state_from_status "$(get_status_raw)")
+  fi
+  echo "$DAILY_STATE"
+}
+
+is_logout_action() {
+  local cmd="$1"
+  [[ "$cmd" == "logout" ]] || [[ "$cmd" =~ (^|[[:space:]])logout($|[[:space:]]) ]]
+}
+
+is_login_action() {
+  local cmd="$1"
+  [[ "$cmd" == "login" ]] || [[ "$cmd" =~ (^|[[:space:]])login($|[[:space:]]) ]]
 }
 
 # Configuration defaults
@@ -139,11 +205,12 @@ LUNCH_logout_message="Time for lunch"
 LUNCH_login_title="Back from lunch"
 LUNCH_login_message="Back from lunch"
 
-# Command defaults (can be overridden in config under [commands])
+# Command defaults (configurable under [commands]).
 LOGIN_COMMAND="daily login"
 LOGOUT_COMMAND="daily logout"
 STATUS_COMMAND="daily status"
 TEST_COMMAND="whoami"
+PREFLIGHT_COMMANDS=""
 WORKING_DAYS="Mon-Fri"
 
 resolve_command_key() {
@@ -176,6 +243,19 @@ resolve_notification_command() {
       echo "$raw"
       ;;
   esac
+}
+
+build_action_command() {
+  local cmd="$1"
+  cmd=${cmd## }
+  cmd=${cmd%% }
+  [[ -z "$cmd" ]] && { echo ""; return 0; }
+
+if [[ -n "$PREFLIGHT_COMMANDS" ]]; then
+    echo "$PREFLIGHT_COMMANDS; $cmd"
+  else
+    echo "$cmd"
+  fi
 }
 
 LATE_after=""
@@ -277,6 +357,36 @@ if [[ -f "$CONFIG" ]]; then
           esac
         fi
         ;;
+      preflight)
+        if [[ $line == *=* ]]; then
+          key=${line%%=*}; val=${line#*=}
+          key=${key// /}; val=${val## }; val=${val%% }
+          val=${val#\"}; val=${val%\"}
+          case "$key" in
+            # Preferred preflight keys
+            command|cmd|before|run|step|setup)
+              if [[ -n "$PREFLIGHT_COMMANDS" ]]; then
+                PREFLIGHT_COMMANDS="$PREFLIGHT_COMMANDS; $val"
+              else
+                PREFLIGHT_COMMANDS="$val"
+              fi
+              ;;
+            # Backward compatibility for old [preflight] command mapping usage
+            login) LOGIN_COMMAND=$val ;;
+            logout) LOGOUT_COMMAND=$val ;;
+            status|status_command) STATUS_COMMAND=$val ;;
+            test) TEST_COMMAND=$val ;;
+            # Also allow numeric keys like 1=...,2=...
+            [0-9]*)
+              if [[ -n "$PREFLIGHT_COMMANDS" ]]; then
+                PREFLIGHT_COMMANDS="$PREFLIGHT_COMMANDS; $val"
+              else
+                PREFLIGHT_COMMANDS="$val"
+              fi
+              ;;
+          esac
+        fi
+        ;;
       commands)
         if [[ $line == *=* ]]; then
           key=${line%%=*}; val=${line#*=}
@@ -312,7 +422,8 @@ if [[ $TEST_MODE == true ]]; then
   if [[ -n "$TEST_ACTION_OVERRIDE" ]]; then
     TEST_COMMAND="$TEST_ACTION_OVERRIDE"
   fi
-  platform_notify "Workday Notify - Test" "$TEST_MESSAGE" "default" "$TEST_COMMAND"
+  test_cmd=$(build_action_command "$TEST_COMMAND")
+  platform_notify "Workday Notify - Test" "$TEST_MESSAGE" "default" "$test_cmd"
   exit 0
 fi
 
@@ -342,6 +453,13 @@ for entry in "${SCHEDULE[@]:-}"; do
       fi
     fi
     resolved_cmd=$(resolve_notification_command "$cmd_trimmed" || true)
+    resolved_cmd=$(build_action_command "$resolved_cmd")
+    if is_logout_action "$resolved_cmd" && [[ "$(current_daily_state)" == "OUT" ]]; then
+      continue
+    fi
+    if is_login_action "$resolved_cmd" && [[ "$(current_daily_state)" == "IN" ]]; then
+      continue
+    fi
     platform_notify "$title" "$msg" "$sound" "$resolved_cmd"
     matched=1
     break
@@ -356,10 +474,18 @@ if [[ $LUNCH_enabled == true && $LUNCH_start != none && $LUNCH_end != none ]]; t
   l_end=$((10#$le_h*60 + 10#$le_m))
   if [[ $LUNCH_logout_enabled == true ]] && (( NOW >= l_start && NOW < l_start + 15 )); then
     cmd=$(resolve_command_key "logout" || true)
+    cmd=$(build_action_command "$cmd")
+    if [[ "$(current_daily_state)" == "OUT" ]]; then
+      cmd=""
+    fi
     platform_notify "$LUNCH_logout_title" "$LUNCH_logout_message" "$LUNCH_sound" "$cmd"
     matched=1
   elif [[ $LUNCH_login_enabled == true ]] && (( NOW >= l_end && NOW < l_end + 15 )); then
     cmd=$(resolve_command_key "login" || true)
+    cmd=$(build_action_command "$cmd")
+    if [[ "$(current_daily_state)" == "IN" ]]; then
+      cmd=""
+    fi
     platform_notify "$LUNCH_login_title" "$LUNCH_login_message" "$LUNCH_sound" "$cmd"
     matched=1
   fi
@@ -382,6 +508,9 @@ fi
 
 # Late warnings (repeat logic)
 if [[ $matched -eq 0 && $LATE_after != "" ]]; then
+  if [[ "$(current_daily_state)" == "OUT" ]]; then
+    exit 0
+  fi
   la_h=${LATE_after%%:*}; la_m=${LATE_after##*:}
   la_start=$((10#$la_h*60 + 10#$la_m))
   repeat=${LATE_repeat:-30}
@@ -396,6 +525,7 @@ if [[ $matched -eq 0 && $LATE_after != "" ]]; then
       msg=${LATE_message//\{time\}/$(date +%H:%M)}
       msg=${msg//\{status\}/$status}
       resolved_cmd=$(resolve_notification_command "$LATE_command" || true)
+      resolved_cmd=$(build_action_command "$resolved_cmd")
       platform_notify "$LATE_title" "$msg" "$LATE_sound" "$resolved_cmd"
       touch "$late_marker"
     fi

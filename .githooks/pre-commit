@@ -43,5 +43,6 @@ bash -n src/workday-notify.sh
 
 echo "[pre-commit] running tests"
 bash tests/test_schedule.sh
+bash tests/test_macos_action_feedback.sh
 
 echo "[pre-commit] OK"

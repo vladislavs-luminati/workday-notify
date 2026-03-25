@@ -62,10 +62,10 @@ Note about Bash: the main script uses Bash features. On Linux the system Bash is
 Install directly from the GitHub release asset (recommended):
 
 ```bash
-curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.9.sh | bash
+curl -sL https://github.com/vladislavs-luminati/workday-notify/releases/latest/download/workday-notify-v1.0.12.sh | bash
 ```
 
-This downloads the self-extracting installer published on the `v1.0.9` release and runs it.
+This downloads the self-extracting installer published on the `v1.0.12` release and runs it.
 
 This downloads and runs the setup script which:
 1. Installs `terminal-notifier` via Homebrew (if missing)
@@ -125,7 +125,12 @@ command = logout
 login = daily login
 logout = daily logout
 status = daily status
+
+[preflight]
+command = source ~/.profile
 ```
+
+`[commands]` defines action commands. `[preflight]` defines setup commands that run before every action command.
 
 `working_days` controls which days reminders run. Examples: `Mon-Fri` (default), `Mon-Sun`, `Mon,Wed,Fri`.
 
@@ -150,6 +155,36 @@ status = daily status
 | `message` | Body text. `{time}` = current time, `{status}` = daily hours |
 | `sound` | macOS sound name |
 | `command` | Command key: `login`, `logout`, or `status` |
+
+### Commands section
+
+Use `[commands]` to register action commands:
+
+| Key | Description |
+|-----|-------------|
+| `login` | Command used for login actions |
+| `logout` | Command used for logout actions |
+| `status` | Command used to read current status |
+| `test` | Command used by `--test` |
+
+### Preflight section
+
+Use `[preflight]` for commands that should run before every action command.
+Example values: `source ~/.profile`, `export FOO=bar`, etc.
+
+| Key | Description |
+|-----|-------------|
+| `command` | Append a preflight command step |
+| `cmd`/`before`/`run`/`step`/`setup` | Aliases for `command` |
+| numeric key (`1`, `2`, ...) | Also accepted for ordered steps |
+
+### Post-action feedback (macOS)
+
+For actionable login/logout reminders, macOS shows a follow-up result notification:
+
+- Login success: `You are now logged in. Have a pleasant and productive day.`
+- Logout success: `You are now logged out. Great work today.`
+- Failure: `Failed to run <action> command. Check /tmp/workday-notify-action.log.`
 
 Changes take effect on the next 15-min cycle — no reload needed.
 
@@ -221,6 +256,18 @@ You can override the test action and message ad-hoc:
 ```bash
 bash src/workday-notify.sh --test --action "whoami" --message "Apply to run test action"
 ```
+
+Run regression tests:
+
+```bash
+bash tests/test_schedule.sh
+bash tests/test_macos_action_feedback.sh
+```
+
+## Docs
+
+- Changelog: `CHANGELOG.md`
+- Action feedback details: `docs/action-feedback.md`
 
 ## Git pre-commit hook
 

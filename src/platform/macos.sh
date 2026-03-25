@@ -23,9 +23,39 @@ APPLESCRIPT
 
 run_terminal_action() {
     local cmd="$1"
-    # Execute in a shell directly; this avoids AppleScript parsing issues with
-    # Terminal "do script" on some macOS setups.
-    bash -lc "source ~/.profile >/dev/null 2>&1; source ~/.bash_profile >/dev/null 2>&1; source ~/.zprofile >/dev/null 2>&1; source ~/.zshrc >/dev/null 2>&1; $cmd" >>/tmp/workday-notify-action.log 2>&1 &
+    # Prefer a clean login shell first; profile-heavy shells can break `daily`
+    # by overriding Node/module resolution in some environments.
+    CMD="$cmd" NOTIFIER_PATH="$NOTIFIER" bash -lc '
+        action=""
+        if [[ "$CMD" =~ (^|[[:space:];|&])daily[[:space:]]+login($|[[:space:];|&]) ]] || [[ "$CMD" =~ (^|[[:space:];|&])login($|[[:space:];|&]) ]]; then
+            action="login"
+        elif [[ "$CMD" =~ (^|[[:space:];|&])daily[[:space:]]+logout($|[[:space:];|&]) ]] || [[ "$CMD" =~ (^|[[:space:];|&])logout($|[[:space:];|&]) ]]; then
+            action="logout"
+        fi
+
+        eval "$CMD"
+        rc=$?
+        if [[ $rc -ne 0 ]]; then
+            source ~/.profile >/dev/null 2>&1
+            source ~/.bash_profile >/dev/null 2>&1
+            source ~/.zprofile >/dev/null 2>&1
+            source ~/.zshrc >/dev/null 2>&1
+            eval "$CMD"
+            rc=$?
+        fi
+
+        if [[ -n "$action" && -n "$NOTIFIER_PATH" && -x "$NOTIFIER_PATH" ]]; then
+            if [[ $rc -eq 0 ]]; then
+                if [[ "$action" == "login" ]]; then
+                    "$NOTIFIER_PATH" -title "Workday Notify" -message "You are now logged in. Have a pleasant and productive day." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+                else
+                    "$NOTIFIER_PATH" -title "Workday Notify" -message "You are now logged out. Great work today." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+                fi
+            else
+                "$NOTIFIER_PATH" -title "Workday Notify" -message "Failed to run $action command. Check /tmp/workday-notify-action.log." -sound default -group workday-notify-action >/dev/null 2>&1 || true
+            fi
+        fi
+    ' >>/tmp/workday-notify-action.log 2>&1 &
 }
 
 platform_init() {
