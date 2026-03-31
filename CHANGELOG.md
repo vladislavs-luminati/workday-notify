@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.0.15 - 2026-03-31
+
+### Fixed
+- `read_local_action_state` now ignores stale state markers from previous days.
+  A marker written on a prior day (e.g. `OUT` from last week) would suppress all
+  logout/late notifications for the entire following day. Markers are now only
+  trusted if their timestamp matches today's date.
+
 ## v1.0.14 - 2026-03-25
 
 ### Fixed

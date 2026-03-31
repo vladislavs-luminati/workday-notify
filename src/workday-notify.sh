@@ -175,12 +175,23 @@ infer_daily_state_from_status() {
 }
 
 read_local_action_state() {
-  local state_dir marker state
+  local state_dir marker state ts marker_date today_date
   state_dir="${WORKDAY_STATE_DIR:-$HOME/.workday-notify/state}"
   marker="$state_dir/last_action_state"
   [[ -f "$marker" ]] || { echo "UNKNOWN"; return; }
   state=$(awk '{print $1}' "$marker" 2>/dev/null)
+  ts=$(awk '{print $2}' "$marker" 2>/dev/null)
   if [[ "$state" == "IN" || "$state" == "OUT" ]]; then
+    if [[ -n "$ts" ]]; then
+      # Only trust the marker if it was written today; stale markers from previous
+      # days must not suppress today's notifications (user may have logged in again).
+      marker_date=$(date -r "$ts" +%Y-%m-%d 2>/dev/null || date -d "@$ts" +%Y-%m-%d 2>/dev/null)
+      today_date=$(date +%Y-%m-%d)
+      if [[ "$marker_date" != "$today_date" ]]; then
+        echo "UNKNOWN"
+        return
+      fi
+    fi
     echo "$state"
   else
     echo "UNKNOWN"

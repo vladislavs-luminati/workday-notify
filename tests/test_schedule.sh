@@ -208,6 +208,36 @@ assert_log_not_contains "NOTIFY|⚠️ Working late!" "local OUT fallback suppre
 
 echo ""
 
+# ─── Stale state marker does not suppress ─────────────────────
+
+echo "Stale state marker:"
+
+> "$MOCK_LOG"
+stale_cfg="/tmp/workday-notify-stale-$$.conf"
+cp "$TEST_DIR/fixtures/default.conf" "$stale_cfg"
+sed -i.bak 's/^status[[:space:]]*=.*/status = false/' "$stale_cfg"
+rm -f "${stale_cfg}.bak"
+
+stale_state_dir="/tmp/workday-notify-stale-state-$$"
+mkdir -p "$stale_state_dir"
+# Write marker with yesterday's timestamp (stale)
+yesterday_ts=$(( $(date +%s) - 86400 ))
+echo "OUT $yesterday_ts" > "$stale_state_dir/last_action_state"
+
+stale_tmp="/tmp/workday-notify-test-stale-$$.sh"
+sed \
+    -e "s|^NOW=\$((.*))$|NOW=1080|" \
+    -e "s|source \"\$SRC_DIR/platform/.*\"|source \"$TEST_DIR/mock_platform.sh\"|" \
+    "$SRC_DIR/workday-notify.sh" > "$stale_tmp"
+
+WORKDAY_CONFIG="$stale_cfg" WORKDAY_STATE_DIR="$stale_state_dir" WORKDAY_DISABLE_STATE_INFERENCE=0 bash "$stale_tmp" 2>/dev/null
+sleep 0.5
+rm -f "$stale_tmp" "$stale_cfg"
+rm -rf "$stale_state_dir"
+assert_log_contains "NOTIFY|⚠️ Working late!" "stale OUT marker does NOT suppress late reminder"
+
+echo ""
+
 # ─── Config missing ──────────────────────────────────────────
 
 echo "Error handling:"
