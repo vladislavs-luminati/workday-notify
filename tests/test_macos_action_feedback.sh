@@ -25,7 +25,7 @@ export MOCK_LOG
 wait_for_pattern() {
     local pattern="$1"
     local label="$2"
-    local tries=30
+    local tries=${3:-150}
     while (( tries > 0 )); do
         if grep -q "$pattern" "$MOCK_LOG" 2>/dev/null; then
             echo "PASS: $label"

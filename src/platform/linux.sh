@@ -26,10 +26,61 @@ ensure_not_headless() {
 
 run_command_in_terminal() {
     local cmd="$1"
+    local wrapper
+    wrapper=$(cat <<'WRAPPER'
+        action=""
+        if [[ "$CMD" =~ (^|[[:space:];|&])daily[[:space:]]+login($|[[:space:];|&]) ]] || [[ "$CMD" =~ (^|[[:space:];|&])login($|[[:space:];|&]) ]]; then
+            action="login"
+        elif [[ "$CMD" =~ (^|[[:space:];|&])daily[[:space:]]+logout($|[[:space:];|&]) ]] || [[ "$CMD" =~ (^|[[:space:];|&])logout($|[[:space:];|&]) ]]; then
+            action="logout"
+        fi
+
+        eval "$CMD"
+        rc=$?
+        if [[ $rc -ne 0 ]]; then
+            source ~/.profile >/dev/null 2>&1
+            source ~/.bash_profile >/dev/null 2>&1
+            source ~/.zprofile >/dev/null 2>&1
+            source ~/.bashrc >/dev/null 2>&1
+            for attempt in 1 2 3; do
+                eval "$CMD"
+                rc=$?
+                [[ $rc -eq 0 ]] && break
+                sleep 3
+            done
+        fi
+
+        if [[ $rc -eq 0 ]]; then
+            state_dir="${WORKDAY_STATE_DIR:-$HOME/.workday-notify/state}"
+            mkdir -p "$state_dir" >/dev/null 2>&1 || true
+            if [[ "$action" == "login" ]]; then
+                echo "IN $(date +%s)" > "$state_dir/last_action_state"
+            elif [[ "$action" == "logout" ]]; then
+                echo "OUT $(date +%s)" > "$state_dir/last_action_state"
+            fi
+        fi
+
+        if [[ -n "$action" ]]; then
+            ts=$(date "+%Y-%m-%d %H:%M:%S")
+            echo "[$ts] action=$action rc=$rc cmd=$CMD"
+            if [[ $rc -eq 0 ]]; then
+                if [[ "$action" == "login" ]]; then
+                    notify_msg="You are now logged in. Have a pleasant and productive day."
+                else
+                    notify_msg="You are now logged out. Great work today."
+                fi
+            else
+                notify_msg="Failed to run $action command. Check /tmp/workday-notify-action.log."
+            fi
+            notify-send -a "Workday Notify" "Workday Notify" "$notify_msg" -u normal 2>/dev/null
+            echo "[$ts] followup_notification msg=$notify_msg"
+        fi
+WRAPPER
+)
     if command -v gnome-terminal &>/dev/null; then
-        gnome-terminal -- bash -c "$cmd; echo; read -r -p 'Press Enter to close... '" &
+        CMD="$cmd" gnome-terminal -- bash -lc "$wrapper" >>/tmp/workday-notify-action.log 2>&1 &
     elif command -v xterm &>/dev/null; then
-        xterm -e "bash -c '$cmd; echo; read -r -p \"Press Enter to close... \"'" &
+        CMD="$cmd" xterm -e bash -lc "$wrapper" >>/tmp/workday-notify-action.log 2>&1 &
     fi
 }
 

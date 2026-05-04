@@ -40,8 +40,12 @@ run_terminal_action() {
             source ~/.bash_profile >/dev/null 2>&1
             source ~/.zprofile >/dev/null 2>&1
             source ~/.zshrc >/dev/null 2>&1
-            eval "$CMD"
-            rc=$?
+            for attempt in 1 2 3; do
+                eval "$CMD"
+                rc=$?
+                [[ $rc -eq 0 ]] && break
+                sleep 3
+            done
         fi
 
         if [[ $rc -eq 0 ]]; then

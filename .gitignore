@@ -1,2 +1,4 @@
 .DS_Store
 *.err
+copilot_context.txt
+setup-ubuntu.sh
